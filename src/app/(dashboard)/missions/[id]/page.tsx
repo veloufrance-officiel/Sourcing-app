@@ -3,11 +3,19 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { AddCandidateForm } from './add-candidate-form'
 import { AnalyzeBriefForm } from './analyze-brief-form'
+import { computeMatchScore, type Criterion } from '@/lib/matching'
 
 type MissionCandidateEntry = {
   id: string
   stage_id: string
-  candidates: { id: string; full_name: string; title: string | null } | null
+  candidates: {
+    id: string
+    full_name: string
+    title: string | null
+    skills: string[] | null
+    location: string | null
+    qualified_by: string | null
+  } | null
 }
 
 type MissionDetail = {
@@ -46,7 +54,7 @@ export default async function MissionDetailPage({
 
   const { data: entries } = await supabase
     .from('mission_candidates')
-    .select('id, stage_id, candidates(id, full_name, title)')
+    .select('id, stage_id, candidates(id, full_name, title, skills, location, qualified_by)')
     .eq('mission_id', id)
     .returns<MissionCandidateEntry[]>()
 
@@ -55,6 +63,8 @@ export default async function MissionDetailPage({
     .select('id, label, weight, source')
     .eq('mission_id', id)
     .order('weight', { ascending: false })
+
+  const scoringCriteria: Criterion[] = (criteria ?? []).map((c) => ({ label: c.label, weight: c.weight }))
 
   const { data: shortlists } = await supabase
     .from('shortlists')
@@ -159,12 +169,40 @@ export default async function MissionDetailPage({
             <p className="mt-1 font-display text-2xl font-semibold text-ink">
               {byStage.get(stage.id)?.length ?? 0}
             </p>
-            <ul className="mt-3 space-y-1">
-              {byStage.get(stage.id)?.map((e) => (
-                <li key={e.id} className="text-sm text-ink">
-                  {e.candidates?.full_name}
-                </li>
-              ))}
+            <ul className="mt-3 space-y-2">
+              {byStage.get(stage.id)?.map((e) => {
+                const candidate = e.candidates
+                if (!candidate) return null
+                const match =
+                  scoringCriteria.length > 0
+                    ? computeMatchScore(
+                        scoringCriteria,
+                        { title: candidate.title, skills: candidate.skills, location: candidate.location },
+                        mission.location
+                      )
+                    : null
+                return (
+                  <li key={e.id} className="text-sm text-ink">
+                    <div className="flex items-center gap-2">
+                      <span>{candidate.full_name}</span>
+                      {candidate.qualified_by === 'arnaud' ? (
+                        <span
+                          className="rounded-full bg-signal-soft px-1.5 py-0.5 text-[10px] font-medium text-signal"
+                          title="Pré-qualifié par Arnaud — signal informatif, n'entre pas dans le score"
+                        >
+                          Arnaud
+                        </span>
+                      ) : null}
+                      {match ? (
+                        <span className="text-xs text-slate">{match.percent}%</span>
+                      ) : null}
+                    </div>
+                    {match && match.matchedCriteria.length > 0 ? (
+                      <p className="text-xs text-slate">Correspond : {match.matchedCriteria.join(', ')}</p>
+                    ) : null}
+                  </li>
+                )
+              })}
             </ul>
           </div>
         ))}

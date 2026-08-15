@@ -38,6 +38,32 @@ export function AddCandidateForm({ missionId, stageId }: { missionId: string; st
           className="mt-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-signal focus:ring-2 focus:ring-signal/20"
         />
       </div>
+      <div>
+        <label htmlFor="skills" className="block text-xs font-medium text-slate">
+          Compétences (séparées par des virgules)
+        </label>
+        <input
+          id="skills"
+          name="skills"
+          placeholder="Windows Server, Active Directory, PowerShell"
+          className="mt-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-signal focus:ring-2 focus:ring-signal/20"
+        />
+      </div>
+      <div>
+        <label htmlFor="location" className="block text-xs font-medium text-slate">
+          Localisation
+        </label>
+        <input
+          id="location"
+          name="location"
+          placeholder="Bordeaux"
+          className="mt-1 rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-signal focus:ring-2 focus:ring-signal/20"
+        />
+      </div>
+      <label className="flex items-center gap-2 self-end pb-2 text-xs text-ink">
+        <input type="checkbox" name="qualified_by_arnaud" className="rounded border-line" />
+        Pré-qualifié par Arnaud
+      </label>
       {state.error ? <p className="w-full text-sm text-amber">{state.error}</p> : null}
       <button
         type="submit"
