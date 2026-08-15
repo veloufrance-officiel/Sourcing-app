@@ -17,6 +17,18 @@ export default function NewMissionPage() {
         <Field label="Lieu" name="location" placeholder="Bordeaux" />
         <Field label="Type de contrat" name="contract_type" placeholder="Freelance" />
         <Field label="TJM (€)" name="daily_rate" type="number" placeholder="350" />
+        <div>
+          <label htmlFor="brief_raw" className="block text-sm font-medium text-ink">
+            Brief client (optionnel)
+          </label>
+          <textarea
+            id="brief_raw"
+            name="brief_raw"
+            rows={5}
+            placeholder="Colle ici le texte du brief — l'analyse IA en extraira les critères."
+            className="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm text-ink outline-none focus:border-signal focus:ring-2 focus:ring-signal/20"
+          />
+        </div>
         {state.error ? <p className="text-sm text-amber">{state.error}</p> : null}
         <button
           type="submit"

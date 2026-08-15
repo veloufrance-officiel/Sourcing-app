@@ -40,6 +40,7 @@ export async function createMission(
       location: String(formData.get('location') ?? '').trim() || null,
       contract_type: String(formData.get('contract_type') ?? '').trim() || null,
       daily_rate: dailyRateRaw ? Number(dailyRateRaw) : null,
+      brief_raw: String(formData.get('brief_raw') ?? '').trim() || null,
       created_by: user.id,
     })
     .select('id')

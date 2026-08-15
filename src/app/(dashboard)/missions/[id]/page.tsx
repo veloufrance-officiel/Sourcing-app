@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { AddCandidateForm } from './add-candidate-form'
+import { AnalyzeBriefForm } from './analyze-brief-form'
 
 type MissionCandidateEntry = {
   id: string
@@ -31,6 +32,14 @@ export default async function MissionDetailPage({
     .eq('mission_id', id)
     .returns<MissionCandidateEntry[]>()
 
+  const { data: criteria } = await supabase
+    .from('brief_criteria')
+    .select('id, label, weight, source')
+    .eq('mission_id', id)
+    .order('weight', { ascending: false })
+
+  const weightLabel: Record<number, string> = { 1: 'souhaitable', 2: 'important', 3: 'obligatoire' }
+
   const byStage = new Map<string, MissionCandidateEntry[]>()
   ;(stages ?? []).forEach((s) => byStage.set(s.id, []))
   ;(entries ?? []).forEach((e) => {
@@ -48,6 +57,30 @@ export default async function MissionDetailPage({
         {mission.client_name} · {mission.location} · {mission.contract_type}
         {mission.daily_rate ? ` · ${mission.daily_rate} €/jour` : ''}
       </p>
+
+      <div className="mt-6 rounded-lg border border-line bg-white p-4">
+        <p className="text-sm font-medium text-ink">Brief client</p>
+        {mission.brief_raw ? (
+          <p className="mt-2 whitespace-pre-wrap text-sm text-slate">{mission.brief_raw}</p>
+        ) : (
+          <p className="mt-2 text-sm text-slate">Aucun brief renseigné pour cette mission.</p>
+        )}
+        {mission.brief_raw ? <AnalyzeBriefForm missionId={mission.id} /> : null}
+
+        {criteria && criteria.length > 0 ? (
+          <ul className="mt-4 space-y-1 border-t border-line pt-4">
+            {criteria.map((c) => (
+              <li key={c.id} className="flex items-center gap-2 text-sm text-ink">
+                <span className="rounded-full bg-signal-soft px-2 py-0.5 text-xs font-medium text-signal">
+                  {weightLabel[c.weight] ?? c.weight}
+                </span>
+                {c.label}
+                {c.source === 'manual' ? <span className="text-xs text-slate">(manuel)</span> : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
 
       {firstStage ? (
         <AddCandidateForm missionId={mission.id} stageId={firstStage.id} />
