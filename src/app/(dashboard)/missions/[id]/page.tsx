@@ -10,6 +10,18 @@ type MissionCandidateEntry = {
   candidates: { id: string; full_name: string; title: string | null } | null
 }
 
+type MissionDetail = {
+  id: string
+  tenant_id: string
+  title: string
+  location: string | null
+  contract_type: string | null
+  daily_rate: number | null
+  brief_raw: string | null
+  source: string
+  clients: { name: string } | null
+}
+
 export default async function MissionDetailPage({
   params,
 }: {
@@ -18,7 +30,12 @@ export default async function MissionDetailPage({
   const { id } = await params
   const supabase = await createClient()
 
-  const { data: mission } = await supabase.from('missions').select('*').eq('id', id).single()
+  const { data: mission } = await supabase
+    .from('missions')
+    .select('id, tenant_id, title, location, contract_type, daily_rate, brief_raw, source, clients(name)')
+    .eq('id', id)
+    .returns<MissionDetail[]>()
+    .single()
   if (!mission) notFound()
 
   const { data: stages } = await supabase
@@ -60,10 +77,17 @@ export default async function MissionDetailPage({
   return (
     <div>
       <h1 className="font-display text-2xl font-semibold text-ink">{mission.title}</h1>
-      <p className="mt-1 text-sm text-slate">
-        {mission.client_name} · {mission.location} · {mission.contract_type}
-        {mission.daily_rate ? ` · ${mission.daily_rate} €/jour` : ''}
-      </p>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <p className="text-sm text-slate">
+          {mission.clients?.name ?? 'Sans client'} · {mission.location} · {mission.contract_type}
+          {mission.daily_rate ? ` · ${mission.daily_rate} €/jour` : ''}
+        </p>
+        {mission.source === 'arnaud' ? (
+          <span className="rounded-full bg-signal-soft px-2 py-0.5 text-xs font-medium text-signal">Arnaud</span>
+        ) : (
+          <span className="rounded-full bg-line px-2 py-0.5 text-xs font-medium text-slate">Direct</span>
+        )}
+      </div>
 
       <div className="mt-6 rounded-lg border border-line bg-white p-4">
         <p className="text-sm font-medium text-ink">Brief client</p>

@@ -29,6 +29,29 @@ export async function createMission(
   const title = String(formData.get('title') ?? '').trim()
   if (!title) return { error: 'Le titre de la mission est requis.' }
 
+  const source = String(formData.get('source') ?? '').trim()
+  if (source !== 'direct' && source !== 'arnaud') {
+    return { error: "Précise l'origine de la mission (Arnaud ou direct)." }
+  }
+
+  // Client existant sélectionné OU nouveau nom saisi (les deux jamais en même
+  // temps côté formulaire — un radio choisit lequel des deux champs compte).
+  let clientId = String(formData.get('client_id') ?? '').trim() || null
+  const newClientName = String(formData.get('new_client_name') ?? '').trim()
+
+  if (!clientId && newClientName) {
+    const { data: newClient, error: clientError } = await supabase
+      .from('clients')
+      .insert({ tenant_id: appUser.tenant_id, name: newClientName })
+      .select('id')
+      .single()
+    if (clientError || !newClient) {
+      logServerError('missions.create.newClient', clientError, { tenantId: appUser.tenant_id })
+      return { error: 'Impossible de créer ce client.' }
+    }
+    clientId = newClient.id
+  }
+
   const dailyRateRaw = String(formData.get('daily_rate') ?? '').trim()
 
   const { data: mission, error } = await supabase
@@ -36,7 +59,8 @@ export async function createMission(
     .insert({
       tenant_id: appUser.tenant_id,
       title,
-      client_name: String(formData.get('client_name') ?? '').trim() || null,
+      client_id: clientId,
+      source,
       location: String(formData.get('location') ?? '').trim() || null,
       contract_type: String(formData.get('contract_type') ?? '').trim() || null,
       daily_rate: dailyRateRaw ? Number(dailyRateRaw) : null,
