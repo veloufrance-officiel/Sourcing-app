@@ -86,33 +86,44 @@ export default async function MissionDetailPage({
 
   return (
     <div>
-      <h1 className="font-display text-2xl font-semibold text-ink">{mission.title}</h1>
-      <div className="mt-1 flex flex-wrap items-center gap-2">
-        <p className="text-sm text-slate">
-          {mission.clients?.name ?? 'Sans client'} · {mission.location} · {mission.contract_type}
-          {mission.daily_rate ? ` · ${mission.daily_rate} €/jour` : ''}
-        </p>
-        {mission.source === 'arnaud' ? (
-          <span className="rounded-full bg-signal-soft px-2 py-0.5 text-xs font-medium text-signal">Arnaud</span>
-        ) : (
-          <span className="rounded-full bg-line px-2 py-0.5 text-xs font-medium text-slate">Direct</span>
-        )}
+      <div className="mb-8">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">{mission.title}</h1>
+          {mission.source === 'arnaud' ? (
+            <span className="shrink-0 rounded-full bg-signal-soft px-3 py-1 text-xs font-semibold text-signal">
+              Arnaud
+            </span>
+          ) : (
+            <span className="shrink-0 rounded-full bg-line px-3 py-1 text-xs font-semibold text-slate">
+              Direct
+            </span>
+          )}
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {mission.clients?.name ? <MetaChip label={mission.clients.name} /> : null}
+          {mission.location ? <MetaChip label={mission.location} /> : null}
+          {mission.contract_type ? <MetaChip label={mission.contract_type} /> : null}
+          {mission.daily_rate ? <MetaChip label={`${mission.daily_rate} €/jour`} mono /> : null}
+        </div>
       </div>
 
-      <div className="mt-6 rounded-lg border border-line bg-white p-4">
-        <p className="text-sm font-medium text-ink">Brief client</p>
+      <div className="rounded-xl border border-line bg-white p-5 shadow-sm">
+        <div className="flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-signal" />
+          <p className="font-display text-xs font-semibold uppercase tracking-wider text-ink">Brief client</p>
+        </div>
         {mission.brief_raw ? (
-          <p className="mt-2 whitespace-pre-wrap text-sm text-slate">{mission.brief_raw}</p>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate">{mission.brief_raw}</p>
         ) : (
-          <p className="mt-2 text-sm text-slate">Aucun brief renseigné pour cette mission.</p>
+          <p className="mt-3 text-sm text-slate">Aucun brief renseigné pour cette mission.</p>
         )}
         {mission.brief_raw ? <AnalyzeBriefForm missionId={mission.id} /> : null}
 
         {criteria && criteria.length > 0 ? (
-          <ul className="mt-4 space-y-1 border-t border-line pt-4">
+          <ul className="mt-4 space-y-1.5 border-t border-line pt-4">
             {criteria.map((c) => (
               <li key={c.id} className="flex items-center gap-2 text-sm text-ink">
-                <span className="rounded-full bg-signal-soft px-2 py-0.5 text-xs font-medium text-signal">
+                <span className="rounded-md bg-signal-soft px-2 py-0.5 text-[11px] font-semibold text-signal">
                   {weightLabel[c.weight] ?? c.weight}
                 </span>
                 {c.label}
@@ -123,25 +134,25 @@ export default async function MissionDetailPage({
         ) : null}
       </div>
 
-      <div className="mt-6 flex items-center justify-between">
-        <p className="text-sm font-medium text-ink">Shortlists</p>
+      <div className="mt-8 flex items-center justify-between">
+        <p className="font-display text-xs font-semibold uppercase tracking-wider text-ink">Shortlists</p>
         <Link
           href={`/missions/${mission.id}/shortlists/new`}
-          className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper"
+          className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:border-signal hover:text-signal"
         >
           + Nouvelle shortlist
         </Link>
       </div>
       {shortlists && shortlists.length > 0 ? (
-        <ul className="mt-2 grid gap-2">
+        <ul className="mt-3 grid gap-2">
           {shortlists.map((s) => (
             <li key={s.id}>
               <Link
                 href={`/missions/${mission.id}/shortlists/${s.id}`}
-                className="flex items-center justify-between rounded-lg border border-line bg-white px-4 py-2 text-sm hover:border-signal"
+                className="flex items-center justify-between rounded-xl border border-line bg-white px-4 py-3 text-sm shadow-sm hover:border-signal"
               >
                 <span className="text-ink">{s.name}</span>
-                <span className="text-xs text-slate">
+                <span className="font-mono text-xs text-slate">
                   {s.shortlist_candidates?.[0]?.count ?? 0} profil
                   {(s.shortlist_candidates?.[0]?.count ?? 0) > 1 ? 's' : ''}
                 </span>
@@ -150,26 +161,26 @@ export default async function MissionDetailPage({
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-sm text-slate">Aucune shortlist pour cette mission pour l&apos;instant.</p>
+        <p className="mt-3 text-sm text-slate">Aucune shortlist pour cette mission pour l&apos;instant.</p>
       )}
 
       {firstStage ? (
         <AddCandidateForm missionId={mission.id} stageId={firstStage.id} />
       ) : (
-        <p className="mt-6 rounded-lg border border-line bg-amber-soft px-4 py-3 text-sm text-ink">
+        <p className="mt-6 rounded-xl border border-line bg-amber-soft px-4 py-3 text-sm text-ink">
           Aucun statut de pipeline pour ce tenant. Vérifie que le trigger de seed (migration 0002)
           a bien tourné sur la table <code className="font-mono">tenants</code>.
         </p>
       )}
 
-      <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {(stages ?? []).map((stage) => (
-          <div key={stage.id} className="rounded-lg border border-line bg-white p-4">
-            <p className="text-sm text-slate">{stage.label}</p>
+          <div key={stage.id} className="rounded-xl border border-line bg-white p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate">{stage.label}</p>
             <p className="mt-1 font-display text-2xl font-semibold text-ink">
               {byStage.get(stage.id)?.length ?? 0}
             </p>
-            <ul className="mt-3 space-y-2">
+            <ul className="mt-3 space-y-2.5">
               {byStage.get(stage.id)?.map((e) => {
                 const candidate = e.candidates
                 if (!candidate) return null
@@ -183,22 +194,20 @@ export default async function MissionDetailPage({
                     : null
                 return (
                   <li key={e.id} className="text-sm text-ink">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <span>{candidate.full_name}</span>
                       {candidate.qualified_by === 'arnaud' ? (
                         <span
-                          className="rounded-full bg-signal-soft px-1.5 py-0.5 text-[10px] font-medium text-signal"
+                          className="rounded-md bg-signal-soft px-1.5 py-0.5 text-[10px] font-semibold text-signal"
                           title="Pré-qualifié par Arnaud — signal informatif, n'entre pas dans le score"
                         >
                           Arnaud
                         </span>
                       ) : null}
-                      {match ? (
-                        <span className="text-xs text-slate">{match.percent}%</span>
-                      ) : null}
+                      {match ? <span className="font-mono text-xs text-slate">{match.percent}%</span> : null}
                     </div>
                     {match && match.matchedCriteria.length > 0 ? (
-                      <p className="text-xs text-slate">Correspond : {match.matchedCriteria.join(', ')}</p>
+                      <p className="mt-0.5 text-xs text-slate">Correspond : {match.matchedCriteria.join(', ')}</p>
                     ) : null}
                   </li>
                 )
@@ -208,5 +217,15 @@ export default async function MissionDetailPage({
         ))}
       </div>
     </div>
+  )
+}
+
+function MetaChip({ label, mono }: { label: string; mono?: boolean }) {
+  return (
+    <span
+      className={`rounded-md border border-line bg-white px-2.5 py-1 text-xs text-ink ${mono ? 'font-mono' : ''}`}
+    >
+      {label}
+    </span>
   )
 }
