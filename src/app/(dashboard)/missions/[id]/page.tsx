@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { AddCandidateForm } from './add-candidate-form'
 import { AnalyzeBriefForm } from './analyze-brief-form'
@@ -37,6 +38,12 @@ export default async function MissionDetailPage({
     .select('id, label, weight, source')
     .eq('mission_id', id)
     .order('weight', { ascending: false })
+
+  const { data: shortlists } = await supabase
+    .from('shortlists')
+    .select('id, name, shared_with_external, shortlist_candidates(count)')
+    .eq('mission_id', id)
+    .order('created_at', { ascending: false })
 
   const weightLabel: Record<number, string> = { 1: 'souhaitable', 2: 'important', 3: 'obligatoire' }
 
@@ -81,6 +88,36 @@ export default async function MissionDetailPage({
           </ul>
         ) : null}
       </div>
+
+      <div className="mt-6 flex items-center justify-between">
+        <p className="text-sm font-medium text-ink">Shortlists</p>
+        <Link
+          href={`/missions/${mission.id}/shortlists/new`}
+          className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:bg-paper"
+        >
+          + Nouvelle shortlist
+        </Link>
+      </div>
+      {shortlists && shortlists.length > 0 ? (
+        <ul className="mt-2 grid gap-2">
+          {shortlists.map((s) => (
+            <li key={s.id}>
+              <Link
+                href={`/missions/${mission.id}/shortlists/${s.id}`}
+                className="flex items-center justify-between rounded-lg border border-line bg-white px-4 py-2 text-sm hover:border-signal"
+              >
+                <span className="text-ink">{s.name}</span>
+                <span className="text-xs text-slate">
+                  {s.shortlist_candidates?.[0]?.count ?? 0} profil
+                  {(s.shortlist_candidates?.[0]?.count ?? 0) > 1 ? 's' : ''}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-slate">Aucune shortlist pour cette mission pour l&apos;instant.</p>
+      )}
 
       {firstStage ? (
         <AddCandidateForm missionId={mission.id} stageId={firstStage.id} />
