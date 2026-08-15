@@ -20,7 +20,11 @@ export async function signInWithEmail(
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      shouldCreateUser: false,
+      // TEMPORAIRE (bootstrap) : true pour permettre la toute première
+      // connexion sans compte pré-provisionné manuellement. À repasser à
+      // false une fois que toi (et Arnaud si besoin) avez un compte —
+      // le vrai contrôle d'accès reste app_users + RLS, pas ce flag.
+      shouldCreateUser: true,
       emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
     },
   })
