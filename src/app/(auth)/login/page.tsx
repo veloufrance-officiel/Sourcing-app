@@ -2,6 +2,7 @@
 
 import { useActionState } from 'react'
 import { signInWithEmail, type SignInState } from './actions'
+import { OAuthButtons } from './oauth-buttons'
 
 const initialState: SignInState = {}
 
@@ -15,12 +16,23 @@ export default function LoginPage() {
         <h1 className="mt-1 font-display text-3xl font-semibold text-ink">Sourcing OS</h1>
         <p className="mt-2 text-sm text-slate">Connexion réservée aux comptes déjà provisionnés.</p>
 
+        {!state.success ? (
+          <div className="mt-8">
+            <OAuthButtons />
+            <div className="my-4 flex items-center gap-3 text-xs text-slate">
+              <span className="h-px flex-1 bg-line" />
+              ou
+              <span className="h-px flex-1 bg-line" />
+            </div>
+          </div>
+        ) : null}
+
         {state.success ? (
           <p className="mt-8 rounded-lg border border-line bg-signal-soft px-4 py-3 text-sm text-ink">
             Lien de connexion envoyé. Vérifie ta boîte mail.
           </p>
         ) : (
-          <form action={formAction} className="mt-8 space-y-3">
+          <form action={formAction} className="space-y-3">
             <label className="block text-sm font-medium text-ink" htmlFor="email">
               Email professionnel
             </label>
