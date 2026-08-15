@@ -1,0 +1,17 @@
+-- missions.client_id avait deux FK vers clients :
+--   1. missions_client_id_fkey — auto-générée par la déclaration inline
+--      "client_id uuid references clients(id)" en migration 0006
+--   2. missions_tenant_client_fkey — la composite (tenant_id, client_id)
+--      ajoutée juste après dans la même migration, pour l'intégrité tenant
+--
+-- Les deux ont coexisté sans erreur de migration (Postgres autorise
+-- plusieurs FK entre les deux mêmes tables), mais PostgREST, lui, ne sait
+-- pas choisir laquelle utiliser pour l'embed `clients(name)` — il répond
+-- 300 Multiple Choices. Côté app, ça se traduisait par un mission introuvable
+-- (notFound()) sur TOUTE page mission ayant un client renseigné, alors que
+-- la ligne existait bel et bien et que RLS l'autorisait.
+--
+-- Trouvé en comparant les logs PostgREST réels (300 sur missions?...&clients(name))
+-- à une requête SQL directe qui, elle, retournait la ligne sans problème —
+-- la différence entre les deux a pointé droit vers l'ambiguïté de jointure.
+alter table missions drop constraint missions_client_id_fkey;
