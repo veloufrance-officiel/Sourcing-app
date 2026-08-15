@@ -36,6 +36,12 @@ export async function addCandidateToMission(
       tenant_id: appUser.tenant_id,
       full_name: fullName,
       title: String(formData.get('title') ?? '').trim() || null,
+      location: String(formData.get('location') ?? '').trim() || null,
+      skills: String(formData.get('skills') ?? '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      qualified_by: formData.get('qualified_by_arnaud') === 'on' ? 'arnaud' : null,
     })
     .select('id')
     .single()

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/server'
+import { signOut } from './actions'
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const supabase = await createClient()
@@ -12,7 +13,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   if (!user) redirect('/login')
 
   return (
-    <div className="flex min-h-screen bg-paper">
+    <div className="flex min-h-screen flex-col bg-paper sm:flex-row">
       <aside className="hidden w-56 shrink-0 border-r border-line px-4 py-6 sm:block">
         <p className="font-display text-sm uppercase tracking-[0.2em] text-slate">OrakL</p>
         <p className="font-display text-lg font-semibold text-ink">Sourcing OS</p>
@@ -26,10 +27,21 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         </nav>
       </aside>
       <div className="flex-1">
-        <header className="flex items-center justify-between border-b border-line px-6 py-4">
-          <p className="text-sm text-slate">{user.email}</p>
+        <header className="flex items-center justify-between border-b border-line px-4 py-4 sm:px-6">
+          <Link href="/missions" className="font-display text-sm font-semibold text-ink sm:hidden">
+            OrakL
+          </Link>
+          <p className="hidden text-sm text-slate sm:block">{user.email}</p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-slate sm:hidden">{user.email}</p>
+            <form action={signOut}>
+              <button type="submit" className="text-xs font-medium text-slate hover:text-ink hover:underline">
+                Se déconnecter
+              </button>
+            </form>
+          </div>
         </header>
-        <main className="px-6 py-8">{children}</main>
+        <main className="px-4 py-8 sm:px-6">{children}</main>
       </div>
     </div>
   )
