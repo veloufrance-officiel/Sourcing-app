@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { logServerError } from '@/lib/log'
 
 export type AddCandidateState = { error?: string }
 
@@ -38,6 +39,10 @@ export async function addCandidateToMission(
     .single()
 
   if (candidateError || !candidate) {
+    logServerError('missions.addCandidate.createCandidate', candidateError, {
+      tenantId: appUser.tenant_id,
+      missionId,
+    })
     return { error: 'Impossible de créer le profil.' }
   }
 
@@ -49,6 +54,7 @@ export async function addCandidateToMission(
   })
 
   if (linkError) {
+    logServerError('missions.addCandidate.link', linkError, { tenantId: appUser.tenant_id, missionId })
     return { error: "Impossible d'ajouter le profil au pipeline." }
   }
 
