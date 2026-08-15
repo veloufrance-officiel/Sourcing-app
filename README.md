@@ -7,10 +7,13 @@ Plateforme de sourcing freelance : missions, profils, pipeline, shortlists. Arch
 - Next.js 16 (App Router, TypeScript strict, Tailwind v4)
 - Auth Supabase (lien magique + Google/Apple), session rafraîchie par `src/proxy.ts`
 - Migration DB complète : multi-tenant + RLS activé sur toutes les tables (`supabase/migrations/`)
-- Une page réelle bout-en-bout : `/missions`, qui interroge Supabase (pas de données factices)
-- CI : typecheck + build sur chaque PR
+- RBAC réel à 4 rôles (owner/admin/recruiter/viewer), testé (`supabase/tests/`)
+- Missions, candidats, pipeline par statut, ajout au pipeline
+- Analyse IA du brief (Claude, extraction de critères structurés — nécessite `ANTHROPIC_API_KEY`)
+- Rate limiting sur la connexion, journal d'audit append-only
+- CI : lint + typecheck + build sur chaque PR
 
-**Volontairement absent pour l'instant** (Phases suivantes, voir la roadmap dans le doc d'architecture) : gestion des candidats, pipeline drag-and-drop, shortlists, analyse IA du brief, facturation Stripe.
+**Volontairement absent pour l'instant** (Phases suivantes, voir la roadmap dans le doc d'architecture) : shortlists, facturation Stripe.
 
 ## Démarrer en local
 
