@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #14161a;
+  --color-paper: #fafaf8;
+  --color-slate: #6b7280;
+  --color-line: #e4e4e1;
+  --color-signal: #2563eb;
+  --color-signal-soft: #eff4ff;
+  --color-amber: #d97706;
+  --color-amber-soft: #fef3e2;
+
+  --font-display: 'Space Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-body: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+}

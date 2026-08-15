@@ -1,0 +1,89 @@
+# OrakL — Sourcing OS
+### Architecture verrouillée — v1
+
+## 1. Vision produit & séquencement
+
+Deux usages partagent un seul moteur :
+
+- **Usage interne** — toi + Arnaud Roncari. Pré-qualifier des freelances, les faire avancer dans un pipeline, les présenter en shortlist. Un seul tenant (le tien), rôle interne étendu.
+- **Usage SaaS** — d'autres cabinets/recruteurs paient un abonnement mensuel pour utiliser le même outil sur leurs propres missions, isolés les uns des autres.
+
+**Séquencement recommandé (le point le plus important) :** on architecture la base et les permissions *comme si* le multi-tenant existait déjà (coût quasi nul si c'est fait dès le départ). On ne construit **pas** tout de suite la couche commerciale SaaS (pricing, signup self-serve, Stripe, plans). Cette couche arrive après le premier placement réel avec Arnaud. Aujourd'hui sourcing OS a zéro client payant et zéro preuve d'usage réel — construire la facturation avant la preuve, c'est perdre des semaines sur la mauvaise priorité.
+
+## 2. Modèle multi-tenant
+
+Stratégie : **base de données partagée + `tenant_id` sur chaque table + Row Level Security Postgres**. Standard pour un SaaS B2B à ce stade (pas besoin d'isolation physique par client tant qu'il n'y a pas d'exigence contractuelle enterprise spécifique). Supabase gère ça nativement (Postgres + RLS + Auth).
+
+Règle non négociable : **RLS activé sur toutes les tables dès la V1**, jamais "à ajouter plus tard". La fuite de données inter-clients est l'incident le plus coûteux pour un SaaS B2B, et c'est très difficile à greffer proprement sur une base qui a grandi sans ça.
+
+Ton usage avec Arnaud = un tenant comme un autre (`is_internal = true`), pas un système parallèle codé séparément.
+
+## 3. Modèle de données (v1)
+
+D'après tes captures, la base existe déjà en substance : missions, profils, pipeline à 7 statuts (Nouveau, À vérifier, Contacté, Qualifié, Shortlist, Présenté, Placé), shortlists, journal d'activité, moteur d'analyse de brief. Le schéma complet est dans `schema-orakl-v1.sql`, avec notamment :
+
+- `tenants`, `app_users` (rôle : owner / admin / recruiter / viewer)
+- `missions` (avec `brief_raw` — texte source du brief client)
+- `brief_criteria` — critères extraits par IA, liés à une mission
+- `candidates` — avec champs RGPD (`consent_status`, `data_retention_until`)
+- `pipeline_stages` — **configurable par tenant**, plus codé en dur
+- `mission_candidates` — la vraie table de pipeline (candidat × mission × statut)
+- `shortlists` / `shortlist_candidates`
+- `activity_log` — déjà amorcé dans ton MVP, bon réflexe, à généraliser
+- `subscriptions` — structure prête, activée en Phase 2
+
+## 4. Rôles & permissions
+
+Deux familles à ne pas confondre :
+
+- **Rôle interne** (toi, potentiellement Arnaud) : accès à toutes les missions de ton tenant, vue globale, export de shortlists.
+- **Rôle tenant externe** (futurs clients payants) : accès strictement scopé à leurs propres missions/profils, jamais aux tiens ni à ceux des autres tenants.
+
+Question ouverte : Arnaud a-t-il besoin d'un compte dans l'outil (lecture seule sur les shortlists présentées), ou reçoit-il des exports/liens ponctuels ? La première option donne une vraie traçabilité (qui a vu quoi, quand) ; la seconde suffit pour démarrer.
+
+## 5. Le moteur IA (analyse de brief)
+
+C'est la vraie différenciation face à un ATS générique. À verrouiller :
+
+- Modèle utilisé et prompt versionné (pas improvisé à chaque appel)
+- Comportement si l'extraction échoue ou renvoie des critères vides (le log montre "0 nouveaux critères" — à vérifier si c'est un résultat normal ou un signe que l'extraction ne fonctionne pas encore)
+- Coût par appel suivi (sur un plan gratuit/starter futur, un usage IA non plafonné mange la marge)
+
+## 6. Facturation / MRR — Phase 2, pas Phase 1
+
+Le moment venu : Stripe Billing, plans (Free / Starter / Pro), feature flags par plan (missions actives simultanées, quota d'analyses IA), webhook Stripe → mise à jour de `subscriptions`. La table existe déjà dans le schéma v1 : rien à migrer le jour J, juste à activer.
+
+## 7. Stack technique recommandée
+
+Cohérente avec ce qui est déjà connecté :
+
+- **Frontend** : Next.js, déployé sur Vercel
+- **Backend / DB / Auth** : Supabase (Postgres + RLS + Auth + Storage pour les CV)
+- **IA** : appels LLM orchestrés côté serveur uniquement (jamais côté client — sinon la clé API fuite)
+- **Paiement** (Phase 2) : Stripe
+- **Email transactionnel** : Resend ou Postmark
+
+## 8. Sécurité & conformité — checklist prod-ready
+
+- [ ] RLS activé et testé sur **toutes** les tables (test : le tenant A ne doit jamais voir une ligne du tenant B, même via un bug applicatif)
+- [ ] Secrets en variables d'environnement, jamais en dur dans le code
+- [ ] Rate limiting sur les endpoints IA (coût + abus)
+- [ ] Sauvegardes DB automatiques + test de restauration
+- [ ] RGPD : base légale pour stocker CV/coordonnées de candidats, durée de conservation, procédure de suppression sur demande
+- [ ] Convention d'apporteur d'affaires signée avec Arnaud (déclencheur du 10%, durée, clause de non-contournement) — juridique, pas technique, mais fait partie du verrouillage global. Je ne suis pas juriste ; un avocat en droit commercial doit valider la formulation exacte.
+
+## 9. Roadmap phasée
+
+1. **Phase 0** — décision : reprendre le code Emergent exporté ou reconstruire proprement sur cette base
+2. **Phase 1** — multi-tenant + RLS + rôles (ce document + `schema-orakl-v1.sql`)
+3. **Phase 2** — pipeline configurable par tenant (sortir les 7 statuts du dur)
+4. **Phase 3** — durcissement du moteur IA de brief + matching profils
+5. **Phase 4** — premier usage réel avec Arnaud sur une vraie mission
+6. **Phase 5** — Stripe + plans + onboarding self-serve (seulement après Phase 4 validée)
+7. **Phase 6** — durcissement sécurité/RGPD final avant ouverture à des clients externes
+
+## 10. Décisions à trancher
+
+- Code Emergent exporté quelque part (GitHub, zip) ou reconstruction complète ?
+- Arnaud : compte dans l'outil ou exports manuels pour démarrer ?
+- Hiérarchie de nom retenue : OrakL (marque) / Sourcing OS (produit) — à confirmer si différent.
