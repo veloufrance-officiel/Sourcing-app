@@ -211,13 +211,23 @@ export default async function MissionDetailPage({
                       ) : null}
                       {match ? <span className="font-mono text-xs text-slate">{match.percent}%</span> : null}
                     </div>
-                    {match && match.matchedCriteria.length > 0 ? (
+                    {match && (match.matchedCriteria.length > 0 || match.missingCriteria.length > 0) ? (
                       <details className="mt-0.5">
-                        <summary className="cursor-pointer text-xs text-slate hover:text-signal">
-                          {match.matchedCriteria.length} critère{match.matchedCriteria.length > 1 ? 's' : ''}{' '}
-                          correspondant{match.matchedCriteria.length > 1 ? 's' : ''}
+                        <summary className="cursor-pointer font-mono text-xs text-slate hover:text-signal">
+                          {match.score}/{match.maxScore} points
                         </summary>
-                        <p className="mt-1 text-xs text-slate">{match.matchedCriteria.join(', ')}</p>
+                        <div className="mt-1.5 space-y-1">
+                          {match.matchedCriteria.length > 0 ? (
+                            <p className="text-xs text-ink">
+                              <span className="text-signal">✓</span> {match.matchedCriteria.join(', ')}
+                            </p>
+                          ) : null}
+                          {match.missingCriteria.length > 0 ? (
+                            <p className="text-xs text-slate">
+                              <span className="text-amber">✗</span> {match.missingCriteria.join(', ')}
+                            </p>
+                          ) : null}
+                        </div>
                       </details>
                     ) : null}
                   </li>
