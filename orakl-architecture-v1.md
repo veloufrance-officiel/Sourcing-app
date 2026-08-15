@@ -72,6 +72,14 @@ C'est la vraie différenciation face à un ATS générique. À verrouiller :
 
 Le moment venu : Stripe Billing, plans (Free / Starter / Pro), feature flags par plan (missions actives simultanées, quota d'analyses IA), webhook Stripe → mise à jour de `subscriptions`. La table existe déjà dans le schéma v1 : rien à migrer le jour J, juste à activer.
 
+## 6bis. Sauvegardes — action requise avant toute vraie donnée
+
+Vérifié (pas supposé) : l'organisation Supabase est en plan **free**, qui n'offre **aucune sauvegarde automatique** — contrairement au plan Pro (7 jours de backups quotidiens, 25$/mois) ou Team (14 jours). Tant que la base ne contient que des données de test, ce n'est pas urgent. **Avant tout usage réel avec des candidats/missions réels (Arnaud inclus), passer sur un plan payant est un prérequis, pas une option** — sans ça, une mauvaise migration ou une suppression accidentelle est irréversible.
+
+## 6ter. Rate limiting
+
+Posé sur le point le plus exposé (demande de lien magique, accessible sans authentification) : 5 tentatives / 15 minutes par email, implémenté en PostgreSQL pur (table + fonction, pas de service externe type Upstash/Redis — cohérent avec "pas d'infrastructure inutile" tant que le volume ne le justifie pas). Fail-open assumé : une panne du rate limiter ne bloque jamais une connexion légitime, elle est juste loggée.
+
 ## 7. Stack technique recommandée — souveraineté
 
 Décision : aucun opérateur sous juridiction américaine dans la chaîne (CLOUD Act), pas seulement des serveurs localisés en France. Un hébergeur français qui revend de l'AWS/Azure/GCP ne suffit pas — l'immunité extraterritoriale dépend de qui opère l'infrastructure, pas seulement d'où elle se trouve physiquement. C'est le critère que mesure SecNumCloud (qualification ANSSI, v3.2). Repère utile, pas une obligation à ce stade : SecNumCloud vise surtout OIV/administrations/secteurs régulés ; pour une PME, choisir un opérateur réellement français (capital, infrastructure propre, pas de revente de cloud américain) capte déjà l'essentiel de la protection.

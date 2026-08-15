@@ -18,6 +18,25 @@ export async function signInWithEmail(
   }
 
   const supabase = await createClient()
+
+  // 5 demandes / 15 min par email : empêche de spammer la boîte mail de
+  // quelqu'un d'autre. Fail-open volontaire (voir catch) : une panne du
+  // rate limiter ne doit jamais empêcher une connexion légitime.
+  try {
+    const { data: allowed, error: rateLimitError } = await supabase.rpc('check_rate_limit', {
+      p_key: `login:${email.toLowerCase()}`,
+      p_max_attempts: 5,
+      p_window_seconds: 900,
+    })
+    if (rateLimitError) {
+      logServerError('login.checkRateLimit', rateLimitError, { emailDomain: email.split('@')[1] ?? null })
+    } else if (allowed === false) {
+      return { error: 'Trop de tentatives. Réessaie dans quelques minutes.' }
+    }
+  } catch (err) {
+    logServerError('login.checkRateLimit.exception', err, { emailDomain: email.split('@')[1] ?? null })
+  }
+
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
