@@ -28,7 +28,11 @@ export default function NewShortlistPage() {
           />
         </div>
         <label className="flex items-center gap-2 text-sm text-ink">
-          <input type="checkbox" name="shared_with_external" className="rounded border-line" />
+          <input
+            type="checkbox"
+            name="shared_with_external"
+            className="h-4 w-4 rounded border-line accent-[#2563eb] focus:ring-2 focus:ring-signal/30"
+          />
           Destinée à être partagée en externe (Arnaud)
         </label>
         <p className="text-xs text-slate">
