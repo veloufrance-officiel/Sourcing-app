@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { logServerError } from '@/lib/log'
 
 export type SignInState = { error?: string; success?: boolean }
 
@@ -30,6 +31,8 @@ export async function signInWithEmail(
   })
 
   if (error) {
+    // Ne jamais logger l'email en clair : au pire un domaine, jamais l'adresse complète.
+    logServerError('login.signInWithOtp', error, { emailDomain: email.split('@')[1] ?? null })
     return { error: "Impossible d'envoyer le lien de connexion. Réessaie dans un instant." }
   }
 

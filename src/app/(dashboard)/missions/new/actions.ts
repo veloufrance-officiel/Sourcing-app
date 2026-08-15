@@ -2,6 +2,7 @@
 
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { logServerError } from '@/lib/log'
 
 export type MissionFormState = { error?: string }
 
@@ -45,6 +46,7 @@ export async function createMission(
     .single()
 
   if (error || !mission) {
+    logServerError('missions.create', error, { tenantId: appUser.tenant_id })
     return { error: 'Impossible de créer la mission.' }
   }
 

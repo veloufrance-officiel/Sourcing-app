@@ -32,14 +32,33 @@ D'après tes captures, la base existe déjà en substance : missions, profils, p
 - `activity_log` — déjà amorcé dans ton MVP, bon réflexe, à généraliser
 - `subscriptions` — structure prête, activée en Phase 2
 
-## 4. Rôles & permissions
+## 4. Rôles & permissions (RBAC réel, appliqué en base — v2)
 
-Deux familles à ne pas confondre :
+Quatre rôles, appliqués par des policies RLS PostgreSQL différenciées (pas seulement dans l'UI) :
 
-- **Rôle interne** (toi, potentiellement Arnaud) : accès à toutes les missions de ton tenant, vue globale, export de shortlists.
-- **Rôle tenant externe** (futurs clients payants) : accès strictement scopé à leurs propres missions/profils, jamais aux tiens ni à ceux des autres tenants.
+| Rôle | Missions/candidats/pipeline | Utilisateurs du tenant | Abonnement |
+|---|---|---|---|
+| `owner` | lecture + écriture | lecture + écriture (sauf soi-même) | lecture seule |
+| `admin` | lecture + écriture | lecture + écriture (sauf soi-même) | lecture seule |
+| `recruiter` | lecture + écriture | lecture seule | lecture seule |
+| `viewer` | lecture seule | lecture seule | lecture seule |
 
-Question ouverte : Arnaud a-t-il besoin d'un compte dans l'outil (lecture seule sur les shortlists présentées), ou reçoit-il des exports/liens ponctuels ? La première option donne une vraie traçabilité (qui a vu quoi, quand) ; la seconde suffit pour démarrer.
+Règles dures, appliquées par trigger PostgreSQL (pas par la seule policy RLS, donc valables même en cas de bug applicatif) :
+- Personne ne peut modifier son propre `role` — même owner/admin sur sa propre ligne.
+- Personne ne peut modifier `tenant_id` d'un `app_users` par cette voie.
+- Personne ne peut se supprimer soi-même de `app_users`.
+
+`subscriptions` : lecture seule pour tout le monde côté client, aucune policy d'écriture. Les changements viennent exclusivement d'un webhook Stripe côté serveur (clé secrète, hors RLS) — voir section 6.
+
+`activity_log` : append-only. INSERT autorisé pour tout membre, SELECT pour tout membre, aucune policy UPDATE/DELETE — un utilisateur ne peut pas falsifier ou supprimer l'historique.
+
+Question ouverte : Arnaud a-t-il besoin d'un compte dans l'outil (probablement `viewer` sur les shortlists présentées), ou reçoit-il des exports/liens ponctuels ?
+
+## 4bis. Intégrité tenant_id (défense en profondeur)
+
+Les policies RLS protègent contre les requêtes normales, mais ne protègent pas contre un bug applicatif ou un script `service_role` qui écrirait une ligne mélangeant deux tenants. Ajout de contraintes composites PostgreSQL (`unique(tenant_id, id)` sur les tables parentes + clés étrangères composites `(tenant_id, ref_id)`) sur toutes les relations traversant plusieurs tables : `missions.created_by`, `brief_criteria.mission_id`, `mission_candidates.*`, `shortlists.mission_id`, `shortlist_candidates.*`, `activity_log.actor_id`. Une ligne référençant une entité d'un autre tenant est rejetée au niveau base, pas seulement au niveau application.
+
+Testé pour de vrai dans `supabase/tests/rls_rbac_isolation.test.sql` — 8 scénarios, tous vérifient un comportement réel (requêtes simulées "en tant que" différents rôles/tenants via `request.jwt.claim.sub`), pas la seule présence d'une policy.
 
 ## 5. Le moteur IA (analyse de brief)
 
