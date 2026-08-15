@@ -72,6 +72,29 @@ C'est la vraie différenciation face à un ATS générique. À verrouiller :
 
 Le moment venu : Stripe Billing, plans (Free / Starter / Pro), feature flags par plan (missions actives simultanées, quota d'analyses IA), webhook Stripe → mise à jour de `subscriptions`. La table existe déjà dans le schéma v1 : rien à migrer le jour J, juste à activer.
 
+## 6bis. Modèle de commission (clarifié)
+
+- **Mission `source = 'arnaud'`** (client final d'Arnaud) : les 10% de commission restent partagés Arnaud/toi, comme convenu au départ. Arnaud pré-qualifie déjà des freelances de son côté pour ces missions.
+- **Mission `source = 'direct'`** (pas un client Arnaud) : les 10% sont pour toi seul.
+- Déjà couvert par le schéma actuel : `missions.source` porte cette distinction, obligatoire à la création, sans défaut silencieux — donc traçable mission par mission, ce qui règle d'emblée toute ambiguïté avec Arnaud (tout est daté et logué dans `activity_log`).
+- Le calcul et le suivi effectif de la commission (montant dû, historique) n'existent pas encore — prévu avec la Phase 2 (facturation), pas construit maintenant.
+
+## 6ter. Phase future — freelances premium (marketplace à deux faces)
+
+Vision posée pour plus tard, volontairement pas construite maintenant : sur les missions `arnaud`, laisser les freelances déjà pré-qualifiés par Arnaud avoir une vraie chance d'être choisis — sans que ça devienne un passe-droit qui écrase un candidat objectivement mieux placé. Fonctionnalités envisagées, jusqu'à 3-4 paliers payants pour les freelances eux-mêmes :
+
+- Mise en avant selon stack technique, localisation, disponibilité
+- Visibilité anticipée sur une nouvelle mission (ex. 24h avant les autres) pour candidater en premier
+
+**Contrainte non négociable, à respecter dès la conception de l'algorithme** : la pré-qualification (Arnaud ou premium payant) doit rester un signal de qualité parmi d'autres dans un scoring transparent, jamais un tri qui prime sur l'adéquation réelle au poste. Sans cette règle posée dès le départ, le système devient injuste pour les freelances non premium et perd toute crédibilité — à documenter précisément avant d'écrire une ligne de code de matching.
+
+Prérequis techniques, aucun n'existe aujourd'hui :
+1. Authentification freelance, séparée de celle des recruteurs (`app_users` ne couvre que les recruteurs/tenants)
+2. Algorithme de scoring transparent et auditable (stack, localisation, disponibilité, qualité de pré-qualification) — le cœur du sujet, à concevoir avant tout code
+3. Facturation freelance distincte de la facturation tenant (Stripe côté freelance, paliers propres)
+
+Aujourd'hui, un `candidate` est une fiche gérée par le recruteur — personne ne s'y connecte. Ce chantier ne se code pas en une session ; il mérite sa propre conception avant implémentation.
+
 ## 6bis. Sauvegardes — action requise avant toute vraie donnée
 
 Vérifié (pas supposé) : l'organisation Supabase est en plan **free**, qui n'offre **aucune sauvegarde automatique** — contrairement au plan Pro (7 jours de backups quotidiens, 25$/mois) ou Team (14 jours). Tant que la base ne contient que des données de test, ce n'est pas urgent. **Avant tout usage réel avec des candidats/missions réels (Arnaud inclus), passer sur un plan payant est un prérequis, pas une option** — sans ça, une mauvaise migration ou une suppression accidentelle est irréversible.
