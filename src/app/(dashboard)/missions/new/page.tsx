@@ -6,8 +6,8 @@ export default async function NewMissionPage() {
   const { data: clients } = await supabase.from('clients').select('id, name').order('name')
 
   return (
-    <div className="max-w-lg">
-      <h1 className="font-display text-2xl font-semibold text-ink">Nouvelle mission</h1>
+    <div className="max-w-2xl">
+      <h1 className="font-display text-3xl font-semibold tracking-tight text-ink">Nouvelle mission</h1>
       <MissionForm clients={clients ?? []} />
     </div>
   )

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import { FileText, ListChecks, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { AddCandidateForm } from './add-candidate-form'
 import { AnalyzeBriefForm } from './analyze-brief-form'
@@ -109,7 +110,7 @@ export default async function MissionDetailPage({
 
       <div className="rounded-xl border border-line bg-white p-5 shadow-sm">
         <div className="flex items-center gap-2">
-          <span className="h-1.5 w-1.5 rounded-full bg-signal" />
+          <FileText className="h-3.5 w-3.5 text-signal" />
           <p className="font-display text-xs font-semibold uppercase tracking-wider text-ink">Brief client</p>
         </div>
         {mission.brief_raw ? (
@@ -135,12 +136,16 @@ export default async function MissionDetailPage({
       </div>
 
       <div className="mt-8 flex items-center justify-between">
-        <p className="font-display text-xs font-semibold uppercase tracking-wider text-ink">Shortlists</p>
+        <div className="flex items-center gap-2">
+          <ListChecks className="h-3.5 w-3.5 text-slate" />
+          <p className="font-display text-xs font-semibold uppercase tracking-wider text-ink">Shortlists</p>
+        </div>
         <Link
           href={`/missions/${mission.id}/shortlists/new`}
-          className="rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:border-signal hover:text-signal"
+          className="flex items-center gap-1 rounded-lg border border-line bg-white px-3 py-1.5 text-xs font-medium text-ink hover:border-signal hover:text-signal"
         >
-          + Nouvelle shortlist
+          <Plus className="h-3.5 w-3.5" />
+          Nouvelle shortlist
         </Link>
       </div>
       {shortlists && shortlists.length > 0 ? (
@@ -207,7 +212,13 @@ export default async function MissionDetailPage({
                       {match ? <span className="font-mono text-xs text-slate">{match.percent}%</span> : null}
                     </div>
                     {match && match.matchedCriteria.length > 0 ? (
-                      <p className="mt-0.5 text-xs text-slate">Correspond : {match.matchedCriteria.join(', ')}</p>
+                      <details className="mt-0.5">
+                        <summary className="cursor-pointer text-xs text-slate hover:text-signal">
+                          {match.matchedCriteria.length} critère{match.matchedCriteria.length > 1 ? 's' : ''}{' '}
+                          correspondant{match.matchedCriteria.length > 1 ? 's' : ''}
+                        </summary>
+                        <p className="mt-1 text-xs text-slate">{match.matchedCriteria.join(', ')}</p>
+                      </details>
                     ) : null}
                   </li>
                 )

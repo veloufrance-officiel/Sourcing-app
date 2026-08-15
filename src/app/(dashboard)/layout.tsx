@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { Briefcase } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from './actions'
@@ -20,8 +21,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <nav className="mt-8 space-y-1 text-sm">
           <Link
             href="/missions"
-            className="block rounded-md px-3 py-2 font-medium text-ink hover:bg-signal-soft"
+            className="flex items-center gap-2 rounded-md px-3 py-2 font-medium text-ink hover:bg-signal-soft"
           >
+            <Briefcase className="h-4 w-4" />
             Missions
           </Link>
         </nav>

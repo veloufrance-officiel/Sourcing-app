@@ -1,5 +1,6 @@
 'use client'
 
+import { UserPlus } from 'lucide-react'
 import { useActionState } from 'react'
 import { addCandidateToMission, type AddCandidateState } from './actions'
 
@@ -10,7 +11,10 @@ export function AddCandidateForm({ missionId, stageId }: { missionId: string; st
 
   return (
     <div className="mt-6 rounded-xl border border-line bg-white p-4 shadow-sm">
-      <p className="text-xs font-semibold uppercase tracking-wider text-slate">Ajouter au pipeline</p>
+      <div className="flex items-center gap-2">
+        <UserPlus className="h-3.5 w-3.5 text-slate" />
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate">Ajouter au pipeline</p>
+      </div>
       <form action={formAction} className="mt-3 flex flex-wrap items-end gap-3">
         <input type="hidden" name="mission_id" value={missionId} />
         <input type="hidden" name="stage_id" value={stageId} />
