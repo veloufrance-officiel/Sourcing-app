@@ -33,6 +33,7 @@ Le code est prêt (boutons + `/auth/callback`), mais chaque provider se configur
 
 ## Décisions notables
 
+- **Souveraineté du hosting** : décision prise de ne dépendre d'aucun opérateur sous juridiction américaine (CLOUD Act). Détail et hébergeurs retenus (Clever Cloud, VPS Supabase auto-hébergé chez OVHcloud) dans `orakl-architecture-v1.md`, section 7. Le code actuel pointe encore vers `*.supabase.co` en local/dev — seule l'URL change au moment de la bascule, pas le code.
 - **Auth sans self-serve** : `shouldCreateUser: false` sur le lien magique. Seuls les comptes provisionnés manuellement (toi, Arnaud) peuvent se connecter par email. L'inscription libre est une décision de Phase 5, pas de maintenant.
 - **Clé Supabase "publishable", jamais "secret"** dans le code applicatif : toute la sécurité tient sur les policies RLS de la migration. La clé secrète contournerait RLS — elle est dans `.env.example` mais non câblée, réservée aux futurs jobs serveur.
 - **`proxy.ts` et non `middleware.ts`** : renommage Next.js 16, même rôle (rafraîchir la session, protéger les routes).

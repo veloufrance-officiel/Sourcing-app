@@ -53,15 +53,20 @@ C'est la vraie différenciation face à un ATS générique. À verrouiller :
 
 Le moment venu : Stripe Billing, plans (Free / Starter / Pro), feature flags par plan (missions actives simultanées, quota d'analyses IA), webhook Stripe → mise à jour de `subscriptions`. La table existe déjà dans le schéma v1 : rien à migrer le jour J, juste à activer.
 
-## 7. Stack technique recommandée
+## 7. Stack technique recommandée — souveraineté
 
-Cohérente avec ce qui est déjà connecté :
+Décision : aucun opérateur sous juridiction américaine dans la chaîne (CLOUD Act), pas seulement des serveurs localisés en France. Un hébergeur français qui revend de l'AWS/Azure/GCP ne suffit pas — l'immunité extraterritoriale dépend de qui opère l'infrastructure, pas seulement d'où elle se trouve physiquement. C'est le critère que mesure SecNumCloud (qualification ANSSI, v3.2). Repère utile, pas une obligation à ce stade : SecNumCloud vise surtout OIV/administrations/secteurs régulés ; pour une PME, choisir un opérateur réellement français (capital, infrastructure propre, pas de revente de cloud américain) capte déjà l'essentiel de la protection.
 
-- **Frontend** : Next.js, déployé sur Vercel
-- **Backend / DB / Auth** : Supabase (Postgres + RLS + Auth + Storage pour les CV)
-- **IA** : appels LLM orchestrés côté serveur uniquement (jamais côté client — sinon la clé API fuite)
-- **Paiement** (Phase 2) : Stripe
-- **Email transactionnel** : Resend ou Postmark
+- **Frontend** : Next.js sur **Clever Cloud** (Nantes, infrastructure propre, déploiement `git push`) plutôt que Vercel. OVHcloud et Scaleway sont des alternatives sérieuses.
+- **Backend / DB / Auth** : stack **Supabase auto-hébergée** (Postgres + Auth + PostgREST + Storage, via Docker) sur un VPS souverain — OVHcloud propose une offre VPS Supabase dédiée. Le code applicatif ne change pas (mêmes clients `@supabase/ssr`, mêmes policies RLS) : seule l'URL du projet change, de `*.supabase.co` vers l'infrastructure auto-hébergée.
+- **Compromis assumé** : l'auto-hébergement fait perdre les sauvegardes automatiques et les mises à jour en un clic de Supabase Cloud — ça devient une responsabilité opérationnelle interne (ou à déléguer). Pas bloquant aujourd'hui, à budgéter avant la mise en prod réelle.
+- **IA** : appels LLM orchestrés côté serveur uniquement (inchangé).
+- **Paiement** (Phase 2) : Stripe n'a pas d'équivalent souverain mature à ce jour — décision à reprendre le moment venu si la souveraineté doit s'étendre à la facturation.
+- **Email transactionnel** : Resend/Postmark à réévaluer sous le même critère si besoin.
+
+## 7bis. Cloisonnement des données
+
+Déjà en place, pas un chantier à part : l'isolation *entre tenants* est assurée par le `tenant_id` + RLS sur chaque table (section 3), vérifiée avant tout déploiement (test : le tenant A ne voit jamais une ligne du tenant B). La question de la souveraineté ci-dessus porte sur *qui héberge* l'infrastructure, pas sur le cloisonnement logique des données, qui est un sujet distinct déjà résolu.
 
 ## 8. Sécurité & conformité — checklist prod-ready
 
