@@ -21,6 +21,7 @@ export type MatchResult = {
   maxScore: number
   percent: number
   matchedCriteria: string[]
+  missingCriteria: string[]
 }
 
 export function computeMatchScore(
@@ -33,12 +34,15 @@ export function computeMatchScore(
   let score = 0
   let maxScore = 0
   const matchedCriteria: string[] = []
+  const missingCriteria: string[] = []
 
   for (const criterion of criteria) {
     maxScore += criterion.weight
     if (haystack.includes(criterion.label.toLowerCase())) {
       score += criterion.weight
       matchedCriteria.push(criterion.label)
+    } else {
+      missingCriteria.push(criterion.label)
     }
   }
 
@@ -50,6 +54,8 @@ export function computeMatchScore(
     if (candidate.location.trim().toLowerCase() === missionLocation.trim().toLowerCase()) {
       score += 1
       matchedCriteria.push(`Localisation (${missionLocation})`)
+    } else {
+      missingCriteria.push(`Localisation (${missionLocation})`)
     }
   }
 
@@ -58,5 +64,6 @@ export function computeMatchScore(
     maxScore,
     percent: maxScore > 0 ? Math.round((score / maxScore) * 100) : 0,
     matchedCriteria,
+    missingCriteria,
   }
 }
