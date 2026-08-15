@@ -58,6 +58,15 @@ export async function addCandidateToMission(
     return { error: "Impossible d'ajouter le profil au pipeline." }
   }
 
+  const { error: logError } = await supabase.from('activity_log').insert({
+    tenant_id: appUser.tenant_id,
+    entity_type: 'mission_candidate',
+    entity_id: candidate.id,
+    action: 'added_to_pipeline',
+    actor_id: user.id,
+  })
+  if (logError) logServerError('missions.addCandidate.activityLog', logError, { tenantId: appUser.tenant_id, missionId })
+
   revalidatePath(`/missions/${missionId}`)
   return {}
 }

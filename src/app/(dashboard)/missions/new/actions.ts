@@ -50,5 +50,15 @@ export async function createMission(
     return { error: 'Impossible de créer la mission.' }
   }
 
+  // Best-effort : une erreur de log ne doit jamais bloquer la création réussie.
+  const { error: logError } = await supabase.from('activity_log').insert({
+    tenant_id: appUser.tenant_id,
+    entity_type: 'mission',
+    entity_id: mission.id,
+    action: 'created',
+    actor_id: user.id,
+  })
+  if (logError) logServerError('missions.create.activityLog', logError, { tenantId: appUser.tenant_id })
+
   redirect(`/missions/${mission.id}`)
 }
