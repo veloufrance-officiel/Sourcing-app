@@ -1,12 +1,32 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
+type MissionListEntry = {
+  id: string
+  title: string
+  location: string | null
+  contract_type: string | null
+  daily_rate: number | null
+  status: string
+  source: string
+  clients: { name: string } | null
+}
+
 export default async function MissionsPage() {
   const supabase = await createClient()
   const { data: missions, error } = await supabase
     .from('missions')
-    .select('id, title, client_name, location, contract_type, daily_rate, status')
+    .select('id, title, location, contract_type, daily_rate, status, source, clients(name)')
     .order('created_at', { ascending: false })
+    .returns<MissionListEntry[]>()
+
+  // Tri explicite plutôt qu'un ORDER BY sur `source` qui ne marcherait que
+  // par coïncidence alphabétique ('arnaud' < 'direct') — fragile et pas
+  // clair si une 3e source apparaît un jour.
+  const sortedMissions = [...(missions ?? [])].sort((a, b) => {
+    if (a.source === b.source) return 0
+    return a.source === 'arnaud' ? -1 : 1
+  })
 
   return (
     <div>
@@ -37,17 +57,24 @@ export default async function MissionsPage() {
         </div>
       ) : null}
 
-      {missions && missions.length > 0 ? (
+      {sortedMissions.length > 0 ? (
         <ul className="mt-6 grid gap-3">
-          {missions.map((mission) => (
+          {sortedMissions.map((mission) => (
             <li key={mission.id}>
               <Link
                 href={`/missions/${mission.id}`}
                 className="block rounded-lg border border-line bg-white px-5 py-4 hover:border-signal"
               >
-                <p className="font-display text-base font-semibold text-ink">{mission.title}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-display text-base font-semibold text-ink">{mission.title}</p>
+                  {mission.source === 'arnaud' ? (
+                    <span className="rounded-full bg-signal-soft px-2 py-0.5 text-xs font-medium text-signal">
+                      Arnaud
+                    </span>
+                  ) : null}
+                </div>
                 <p className="mt-1 text-sm text-slate">
-                  {mission.client_name} · {mission.location} · {mission.contract_type}
+                  {mission.clients?.name ?? 'Sans client'} · {mission.location} · {mission.contract_type}
                   {mission.daily_rate ? ` · ${mission.daily_rate} €/jour` : ''}
                 </p>
               </Link>
