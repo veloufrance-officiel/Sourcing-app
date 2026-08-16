@@ -58,6 +58,19 @@ jobs:
             echo "::error::$ERROR_TEXT"
             exit $EXIT_CODE
           fi
+      - name: Lancer les tests du moteur d'éligibilité contre la stack locale réelle
+        run: |
+          set +e
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/eligibility_engine.test.sql > /tmp/psql_output2.txt 2>&1
+          EXIT_CODE=$?
+          cat /tmp/psql_output2.txt
+          if [ $EXIT_CODE -ne 0 ]; then
+            ERROR_TEXT=$(cat /tmp/psql_output2.txt | tr '\n' ' ' | tr '%' ' ' | head -c 1000)
+            echo "::error::$ERROR_TEXT"
+            exit $EXIT_CODE
+          fi
       - name: Arrêter Supabase
         if: always()
         run: supabase stop
