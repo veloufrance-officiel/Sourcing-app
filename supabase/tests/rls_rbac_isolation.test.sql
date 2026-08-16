@@ -8,8 +8,9 @@
 -- présence d'une policy. Crée ses propres fixtures et les nettoie à la
 -- fin — ne touche jamais aux données réelles (tenant_id "TEST %").
 --
--- Sortie : lève une exception listant tous les PASS si tout réussit,
--- ou une exception 'FAIL test N' au premier échec (fixtures alors
+-- Sortie : affiche un NOTICE listant tous les PASS si tout réussit (code
+-- de sortie 0, pour la CI), ou lève une EXCEPTION 'FAIL test N' au premier
+-- échec (code de sortie non-zéro, fait échouer la CI ; fixtures alors
 -- automatiquement annulées par le ROLLBACK implicite du bloc DO).
 -- =====================================================================
 
@@ -33,11 +34,16 @@ begin
   insert into tenants (name, is_internal) values ('TEST Tenant A', false) returning id into tenant_a;
   insert into tenants (name, is_internal) values ('TEST Tenant B', false) returning id into tenant_b;
 
-  insert into auth.users (id, instance_id) values
-    (user_a_owner, '00000000-0000-0000-0000-000000000000'),
-    (user_a_recruiter, '00000000-0000-0000-0000-000000000000'),
-    (user_a_viewer, '00000000-0000-0000-0000-000000000000'),
-    (user_b_owner, '00000000-0000-0000-0000-000000000000');
+  -- Insert plus complet que le strict minimum : la stack Supabase locale
+  -- (CI, Docker) impose des contraintes plus strictes sur auth.users que
+  -- l'environnement hébergé (découvert en confrontant ce test à la vraie
+  -- CI — le minimal id+instance_id fonctionne en production mais pas en
+  -- local). Ce jeu de champs fonctionne dans les deux environnements.
+  insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data) values
+    (user_a_owner, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'a-owner@test.local', crypt('test-only', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}'),
+    (user_a_recruiter, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'a-recruiter@test.local', crypt('test-only', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}'),
+    (user_a_viewer, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'a-viewer@test.local', crypt('test-only', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}'),
+    (user_b_owner, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'b-owner@test.local', crypt('test-only', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{}');
 
   insert into app_users (id, tenant_id, email, role) values
     (user_a_owner, tenant_a, 'a-owner@test.local', 'owner'),
@@ -149,5 +155,8 @@ begin
   delete from auth.users where id in (user_a_owner, user_a_recruiter, user_a_viewer, user_b_owner);
 
   report := report || E'=== TOUS LES TESTS PASSENT (8/8), FIXTURES NETTOYÉES ===';
-  raise exception '%', report; -- raise pour garantir l'affichage même en cas de succès
+  raise notice '%', report; -- notice, pas exception : un succès ne doit PAS faire échouer la CI.
+  -- Chaque échec ci-dessus utilise raise exception (sortie non-zéro,
+  -- fait échouer la CI comme attendu) ; seul ce dernier message de
+  -- succès global doit rester silencieux côté code de sortie.
 end $$;

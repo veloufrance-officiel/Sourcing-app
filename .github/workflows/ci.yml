@@ -22,3 +22,42 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
           NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
+  # Répond à H-01 de l'audit Red Team du 16/08/2026 : jusqu'ici, aucun test
+  # de sécurité n'était automatisé, seulement lancé à la main. Le fichier
+  # de tests existait déjà (supabase/tests/rls_rbac_isolation.test.sql) mais
+  # ne tournait jamais tout seul.
+  #
+  # Démarre une vraie stack Supabase locale (Postgres + Auth + Vault via
+  # Docker) plutôt qu'un Postgres nu, parce que le schéma dépend de
+  # primitives Supabase réelles (auth.users, auth.uid(), vault) — un
+  # Postgres vanilla ne suffirait pas à reproduire fidèlement ce qui tourne
+  # en production. `supabase start` applique automatiquement tous les
+  # fichiers de supabase/migrations/ dans l'ordre.
+  security-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Démarrer la stack Supabase locale (applique les migrations)
+        run: supabase start
+      - name: Installer psql
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Lancer les tests RLS/RBAC contre la stack locale réelle
+        run: |
+          set +e
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/rls_rbac_isolation.test.sql > /tmp/psql_output.txt 2>&1
+          EXIT_CODE=$?
+          cat /tmp/psql_output.txt
+          if [ $EXIT_CODE -ne 0 ]; then
+            ERROR_TEXT=$(cat /tmp/psql_output.txt | tr '\n' ' ' | tr '%' ' ' | head -c 1000)
+            echo "::error::$ERROR_TEXT"
+            exit $EXIT_CODE
+          fi
+      - name: Arrêter Supabase
+        if: always()
+        run: supabase stop
