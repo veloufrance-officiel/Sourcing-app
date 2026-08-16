@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Briefcase } from 'lucide-react'
+import { Briefcase, Settings } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { signOut } from './actions'
@@ -25,6 +25,13 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           >
             <Briefcase className="h-4 w-4" />
             Missions
+          </Link>
+          <Link
+            href="/settings"
+            className="flex items-center gap-2 rounded-md px-3 py-2 font-medium text-ink hover:bg-signal-soft"
+          >
+            <Settings className="h-4 w-4" />
+            Réglages
           </Link>
         </nav>
       </aside>
