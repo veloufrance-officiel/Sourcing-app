@@ -6,6 +6,8 @@
 // Usage : logServerError('missions.create', error, { tenantId })
 // Ne JAMAIS passer l'objet formData/candidat entier en contexte.
 
+import { sendTelegramMessage } from './telegram'
+
 type LogContext = Record<string, string | number | boolean | null | undefined>
 
 export function logServerError(action: string, error: unknown, context: LogContext = {}) {
@@ -19,4 +21,8 @@ export function logServerError(action: string, error: unknown, context: LogConte
       timestamp: new Date().toISOString(),
     })
   )
+
+  // Fire-and-forget : ne jamais faire dépendre le chemin d'erreur existant
+  // d'une notification qui pourrait elle-même échouer.
+  void sendTelegramMessage(`🔴 <b>Erreur</b> — ${action}\n${message}`)
 }
