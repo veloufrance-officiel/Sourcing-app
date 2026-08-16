@@ -1,0 +1,17 @@
+-- Comme documenté dans migration 0016 : l'hébergé Supabase accorde
+-- implicitement SELECT/INSERT/UPDATE/DELETE à service_role dès la
+-- création d'une table (bootstrap par défaut) — la stack locale de CI
+-- ne le fait pas. evidence, créée après 0016, n'avait jamais reçu ce
+-- GRANT explicite pour service_role.
+--
+-- Trouvé via l'échec réel de CI sur le correctif de vérification
+-- humaine (evidence_human_verification.test.sql utilise service_role
+-- pour simuler un pipeline automatique sans session, cas 1/2/7/8/9/10),
+-- pas anticipé à l'avance : "permission denied for table evidence" sur
+-- un simple UPDATE en service_role, alors que la même opération
+-- fonctionnait sans erreur contre l'hébergé (où le GRANT implicite
+-- existe déjà). Vérifié en base avant cette migration :
+-- information_schema.role_table_grants confirme le GRANT déjà présent
+-- côté hébergé — cette migration le rend explicite, elle ne change rien
+-- côté production.
+grant select, insert, update, delete on evidence to service_role;
