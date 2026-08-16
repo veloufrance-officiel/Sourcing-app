@@ -4,6 +4,7 @@ import { FileText, ListChecks, Plus } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { AddCandidateForm } from './add-candidate-form'
 import { AnalyzeBriefForm } from './analyze-brief-form'
+import { AnonymizeCandidateButton } from './anonymize-candidate-button'
 import { computeMatchScore, type Criterion } from '@/lib/matching'
 
 type MissionCandidateEntry = {
@@ -210,6 +211,13 @@ export default async function MissionDetailPage({
                         </span>
                       ) : null}
                       {match ? <span className="font-mono text-xs text-slate">{match.percent}%</span> : null}
+                      <span className="ml-auto">
+                        <AnonymizeCandidateButton
+                          candidateId={candidate.id}
+                          missionId={mission.id}
+                          candidateName={candidate.full_name}
+                        />
+                      </span>
                     </div>
                     {match && (match.matchedCriteria.length > 0 || match.missingCriteria.length > 0) ? (
                       <details className="mt-0.5">

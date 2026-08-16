@@ -8,6 +8,44 @@ import { getAnthropicClientForTenant } from '@/lib/anthropic'
 
 export type AddCandidateState = { error?: string }
 
+export type AnonymizeCandidateState = { error?: string; success?: boolean }
+
+export async function anonymizeCandidate(
+  _prevState: AnonymizeCandidateState,
+  formData: FormData
+): Promise<AnonymizeCandidateState> {
+  const candidateId = String(formData.get('candidate_id') ?? '')
+  const missionId = String(formData.get('mission_id') ?? '')
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Session expirée.' }
+
+  const { data: appUser } = await supabase.from('app_users').select('tenant_id').eq('id', user.id).single()
+  if (!appUser) return { error: 'Compte non rattaché à un tenant.' }
+
+  const { error } = await supabase.rpc('anonymize_candidate', { p_candidate_id: candidateId })
+
+  if (error) {
+    logServerError('missions.anonymizeCandidate', error, { tenantId: appUser.tenant_id, candidateId })
+    return { error: error.message.includes('owner/admin') ? error.message : "Impossible d'anonymiser ce profil." }
+  }
+
+  const { error: logError } = await supabase.from('activity_log').insert({
+    tenant_id: appUser.tenant_id,
+    entity_type: 'candidate',
+    entity_id: candidateId,
+    action: 'anonymized_rgpd',
+    actor_id: user.id,
+  })
+  if (logError) logServerError('missions.anonymizeCandidate.activityLog', logError, { tenantId: appUser.tenant_id })
+
+  revalidatePath(`/missions/${missionId}`)
+  return { success: true }
+}
+
 export async function addCandidateToMission(
   _prevState: AddCandidateState,
   formData: FormData
