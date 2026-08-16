@@ -8,8 +8,9 @@
 -- présence d'une policy. Crée ses propres fixtures et les nettoie à la
 -- fin — ne touche jamais aux données réelles (tenant_id "TEST %").
 --
--- Sortie : lève une exception listant tous les PASS si tout réussit,
--- ou une exception 'FAIL test N' au premier échec (fixtures alors
+-- Sortie : affiche un NOTICE listant tous les PASS si tout réussit (code
+-- de sortie 0, pour la CI), ou lève une EXCEPTION 'FAIL test N' au premier
+-- échec (code de sortie non-zéro, fait échouer la CI ; fixtures alors
 -- automatiquement annulées par le ROLLBACK implicite du bloc DO).
 -- =====================================================================
 
@@ -149,5 +150,8 @@ begin
   delete from auth.users where id in (user_a_owner, user_a_recruiter, user_a_viewer, user_b_owner);
 
   report := report || E'=== TOUS LES TESTS PASSENT (8/8), FIXTURES NETTOYÉES ===';
-  raise exception '%', report; -- raise pour garantir l'affichage même en cas de succès
+  raise notice '%', report; -- notice, pas exception : un succès ne doit PAS faire échouer la CI.
+  -- Chaque échec ci-dessus utilise raise exception (sortie non-zéro,
+  -- fait échouer la CI comme attendu) ; seul ce dernier message de
+  -- succès global doit rester silencieux côté code de sortie.
 end $$;
