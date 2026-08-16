@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { logServerError } from '@/lib/log'
+import { sendTelegramMessage } from '@/lib/telegram'
 
 export type MissionFormState = { error?: string }
 
@@ -84,6 +85,10 @@ export async function createMission(
     actor_id: user.id,
   })
   if (logError) logServerError('missions.create.activityLog', logError, { tenantId: appUser.tenant_id })
+
+  void sendTelegramMessage(
+    `🆕 <b>Nouvelle mission</b> — ${title}\n${source === 'arnaud' ? '🔵 Arnaud (commission partagée)' : '⚪ Direct'}`
+  )
 
   redirect(`/missions/${mission.id}`)
 }
