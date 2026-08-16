@@ -4,7 +4,7 @@ import type Anthropic from '@anthropic-ai/sdk'
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { logServerError } from '@/lib/log'
-import { getAnthropicClient } from '@/lib/anthropic'
+import { getAnthropicClientForTenant } from '@/lib/anthropic'
 
 export type AddCandidateState = { error?: string }
 
@@ -143,13 +143,15 @@ export async function analyzeBrief(
     return { error: "Aucun texte de brief à analyser. Ajoute-le d'abord sur la mission." }
   }
 
-  const anthropic = getAnthropicClient()
+  const anthropic = await getAnthropicClientForTenant(appUser.tenant_id)
   if (!anthropic) {
-    logServerError('missions.analyzeBrief.missingApiKey', new Error('ANTHROPIC_API_KEY absente'), {
+    logServerError('missions.analyzeBrief.missingApiKey', new Error('Aucune clé Anthropic disponible'), {
       tenantId: appUser.tenant_id,
       missionId,
     })
-    return { error: "Clé API Anthropic non configurée côté serveur (ANTHROPIC_API_KEY)." }
+    return {
+      error: "Aucune clé API Anthropic configurée. Ajoute la tienne dans Réglages, ou contacte l'administrateur.",
+    }
   }
 
   let criteria: { label: string; weight: number }[] = []
