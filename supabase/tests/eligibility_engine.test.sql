@@ -43,8 +43,18 @@ begin
   v_report := v_report || E'PASS sanity check : trigger insert calcule immédiatement (NOT_QUALIFIED sans preuve)\n';
 
   -- --- Le trigger sur evidence INSERT recalcule automatiquement ---
+  -- Session humaine établie : depuis le durcissement Evidence (voir
+  -- supabase/migrations/0018), un insert direct en VERIFIED exige
+  -- auth.uid() non null. Ce fichier teste le recalcul d'éligibilité,
+  -- pas la vérification humaine elle-même (couverte séparément par
+  -- evidence_human_verification.test.sql) — mais doit s'y conformer
+  -- pour rester exécutable.
+  set local role authenticated;
+  perform set_config('request.jwt.claim.sub', v_owner::text, true);
   insert into evidence (tenant_id, candidate_id, criterion_id, status, is_inference, source_type, source_priority)
   values (v_tenant, v_candidate, v_criterion, 'VERIFIED', false, 'self_declared', 1);
+  reset role;
+  perform set_config('request.jwt.claim.sub', '', true);
 
   select eligibility_status into v_status from mission_candidates where mission_id = v_mission and candidate_id = v_candidate;
   if v_status != 'ELIGIBLE' then
@@ -62,7 +72,11 @@ begin
   end if;
 
   -- Nouvelle preuve : le candidat n'a en fait PAS React (contradiction)
+  set local role authenticated;
+  perform set_config('request.jwt.claim.sub', v_owner::text, true);
   update evidence set status = 'CONTRADICTED' where candidate_id = v_candidate and criterion_id = v_criterion;
+  reset role;
+  perform set_config('request.jwt.claim.sub', '', true);
 
   select eligibility_status into v_status from mission_candidates where mission_id = v_mission and candidate_id = v_candidate;
   if v_status != 'INELIGIBLE' then
