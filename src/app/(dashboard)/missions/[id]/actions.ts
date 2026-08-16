@@ -142,6 +142,41 @@ export async function analyzeBrief(
   if (!briefRaw) {
     return { error: "Aucun texte de brief à analyser. Ajoute-le d'abord sur la mission." }
   }
+  if (briefRaw.length > 10000) {
+    return { error: 'Le brief est trop long (max 10 000 caractères). Raccourcis-le avant de relancer.' }
+  }
+
+  // Défense contre l'abus/coût : cooldown court par mission (empêche une boucle
+  // serrée sur une seule mission) + plafond horaire par tenant (empêche l'attaque
+  // étalée sur plusieurs missions). Réutilise check_rate_limit, déjà construit
+  // pour le login — pas de nouvelle infrastructure.
+  const { data: allowedMission, error: rateLimitMissionError } = await supabase.rpc('check_rate_limit', {
+    p_key: `analyze_brief:${missionId}`,
+    p_max_attempts: 1,
+    p_window_seconds: 30,
+  })
+  if (rateLimitMissionError) {
+    logServerError('missions.analyzeBrief.checkRateLimitMission', rateLimitMissionError, {
+      tenantId: appUser.tenant_id,
+      missionId,
+    })
+  } else if (allowedMission === false) {
+    return { error: 'Une analyse vient déjà de tourner sur cette mission. Réessaie dans quelques secondes.' }
+  }
+
+  const { data: allowedTenant, error: rateLimitTenantError } = await supabase.rpc('check_rate_limit', {
+    p_key: `analyze_brief_tenant:${appUser.tenant_id}`,
+    p_max_attempts: 20,
+    p_window_seconds: 3600,
+  })
+  if (rateLimitTenantError) {
+    logServerError('missions.analyzeBrief.checkRateLimitTenant', rateLimitTenantError, {
+      tenantId: appUser.tenant_id,
+      missionId,
+    })
+  } else if (allowedTenant === false) {
+    return { error: "Limite horaire d'analyses IA atteinte pour ton organisation (20/h). Réessaie plus tard." }
+  }
 
   const anthropic = await getAnthropicClientForTenant(appUser.tenant_id)
   if (!anthropic) {

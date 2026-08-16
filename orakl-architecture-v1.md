@@ -79,6 +79,16 @@ Le moment venu : Stripe Billing, plans (Free / Starter / Pro), feature flags par
 - Déjà couvert par le schéma actuel : `missions.source` porte cette distinction, obligatoire à la création, sans défaut silencieux — donc traçable mission par mission, ce qui règle d'emblée toute ambiguïté avec Arnaud (tout est daté et logué dans `activity_log`).
 - Le calcul et le suivi effectif de la commission (montant dû, historique) n'existent pas encore — prévu avec la Phase 2 (facturation), pas construit maintenant.
 
+## 6quater. Roadmap P0 issue de l'audit Red Team du 16/08/2026
+
+En attente de budget, priorité la plus haute dès que possible :
+- **Passer Supabase Free → Pro (25$/mois)** — active les sauvegardes automatiques quotidiennes. Aujourd'hui : zéro backup, perte de données irréversible en cas d'incident. Pas urgent tant que l'usage reste interne/volume faible, mais **bloquant avant tout accès externe réel (Arnaud inclus)**.
+
+Déjà fait suite au même audit :
+- Rate limiting sur l'analyse IA du brief (1/30s par mission, 20/h par tenant, brief plafonné à 10 000 caractères) — protège contre une boucle d'appels coûteuse, cf. `check_rate_limit` réutilisé.
+
+Rapport complet : `SOURCINGOS_RED_TEAM_AUDIT.md`.
+
 ## 6ter. Phase future — freelances premium (marketplace à deux faces)
 
 Vision posée pour plus tard, volontairement pas construite maintenant : sur les missions `arnaud`, laisser les freelances déjà pré-qualifiés par Arnaud avoir une vraie chance d'être choisis — sans que ça devienne un passe-droit qui écrase un candidat objectivement mieux placé. Fonctionnalités envisagées, jusqu'à 3-4 paliers payants pour les freelances eux-mêmes :
