@@ -42,6 +42,9 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           </Link>
           <p className="hidden text-sm text-slate sm:block">{user.email}</p>
           <div className="flex items-center gap-3">
+            <Link href="/settings" className="text-xs font-medium text-slate hover:text-ink sm:hidden">
+              Réglages
+            </Link>
             <p className="text-xs text-slate sm:hidden">{user.email}</p>
             <form action={signOut}>
               <button type="submit" className="text-xs font-medium text-slate hover:text-ink hover:underline">
