@@ -47,6 +47,7 @@ begin
   exception when others then v_error := true;
   end;
   reset role;
+  perform set_config('request.jwt.claim.sub', '', true);
   if not v_error then raise exception 'FAIL cas 1 : VERIFIED sans session humaine accepté'; end if;
   v_report := v_report || E'PASS cas 1\n';
 
@@ -59,6 +60,7 @@ begin
   exception when others then v_error := true;
   end;
   reset role;
+  perform set_config('request.jwt.claim.sub', '', true);
   if not v_error then raise exception 'FAIL cas 2 : CONTRADICTED sans session humaine accepté'; end if;
   v_report := v_report || E'PASS cas 2\n';
 
@@ -69,6 +71,7 @@ begin
   values (v_tenant, v_candidate, v_criterion1, 'VERIFIED', false, 'self_declared', 1)
   returning id, verified_by, verified_at into v_ev, v_verified_by, v_verified_at;
   reset role;
+  perform set_config('request.jwt.claim.sub', '', true);
   if v_verified_by != v_owner then raise exception 'FAIL cas 3 : verified_by incorrect (%)', v_verified_by; end if;
   if v_verified_at is null then raise exception 'FAIL cas 3 : verified_at non posé'; end if;
   v_report := v_report || E'PASS cas 3\n';
@@ -80,6 +83,7 @@ begin
   values (v_tenant, v_candidate, v_criterion2, 'CONTRADICTED', false, 'self_declared', 1)
   returning id, verified_by into v_ev2, v_verified_by;
   reset role;
+  perform set_config('request.jwt.claim.sub', '', true);
   if v_verified_by != v_owner then raise exception 'FAIL cas 4 : verified_by incorrect sur CONTRADICTED'; end if;
   v_report := v_report || E'PASS cas 4\n';
 
@@ -95,6 +99,8 @@ begin
     values (v_tenant, v_candidate, v_criterion1, 'VERIFIED', false, 'self_declared', 1, v_fake_id, '2000-01-01')
     returning id, verified_by into v_ev5, v_vb5;
     reset role;
+    perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.sub', '', true);
     if v_vb5 = v_fake_id then raise exception 'FAIL CRITIQUE cas 5 : faux verified_by accepté tel quel'; end if;
     if v_vb5 != v_owner then raise exception 'FAIL cas 5 : verified_by inattendu (%)', v_vb5; end if;
     delete from evidence where id = v_ev5;
@@ -106,6 +112,7 @@ begin
   perform set_config('request.jwt.claim.sub', v_second_user::text, true);
   update evidence set evidence_text = 'modification sans rapport' where id = v_ev;
   reset role;
+  perform set_config('request.jwt.claim.sub', '', true);
   select verified_by into v_verified_by from evidence where id = v_ev;
   if v_verified_by != v_owner then raise exception 'FAIL CRITIQUE cas 6 : verified_by réattribué (%)', v_verified_by; end if;
   v_report := v_report || E'PASS cas 6\n';
@@ -119,6 +126,7 @@ begin
   exception when others then v_error := true;
   end;
   reset role;
+  perform set_config('request.jwt.claim.sub', '', true);
   if not v_error then raise exception 'FAIL CRITIQUE cas 7 : faille originale toujours exploitable'; end if;
   v_report := v_report || E'PASS cas 7\n';
 
@@ -131,6 +139,7 @@ begin
   exception when others then v_error := true;
   end;
   reset role;
+  perform set_config('request.jwt.claim.sub', '', true);
   if not v_error then raise exception 'FAIL cas 8'; end if;
   v_report := v_report || E'PASS cas 8\n';
 
@@ -138,6 +147,7 @@ begin
   set local role service_role;
   update evidence set status = 'NOT_VERIFIED' where id = v_ev;
   reset role;
+  perform set_config('request.jwt.claim.sub', '', true);
   select verified_by, verified_at into v_verified_by, v_verified_at from evidence where id = v_ev;
   if v_verified_by is not null or v_verified_at is not null then
     raise exception 'FAIL cas 9 : verified_by/verified_at non nettoyés';
@@ -148,6 +158,7 @@ begin
   set local role service_role;
   update evidence set status = 'NOT_VERIFIED' where id = v_ev2;
   reset role;
+  perform set_config('request.jwt.claim.sub', '', true);
   select verified_by, verified_at into v_verified_by, v_verified_at from evidence where id = v_ev2;
   if v_verified_by is not null or v_verified_at is not null then
     raise exception 'FAIL cas 10 : verified_by/verified_at non nettoyés depuis CONTRADICTED';
@@ -170,6 +181,8 @@ begin
     get diagnostics v_count = row_count;
     if v_count > 0 then raise exception 'FAIL CRITIQUE cas 11 : attaquant cross-tenant a modifié une evidence réelle'; end if;
     reset role;
+    perform set_config('request.jwt.claim.sub', '', true);
+  perform set_config('request.jwt.claim.sub', '', true);
     perform set_config('request.jwt.claim.sub', '', true);
 
     delete from app_users where id = v_attacker;
