@@ -6,6 +6,7 @@ import { AddCandidateForm } from './add-candidate-form'
 import { AnalyzeBriefForm } from './analyze-brief-form'
 import { AnonymizeCandidateButton } from './anonymize-candidate-button'
 import { EvidenceReviewDrawer, type EvidenceCriterion } from './evidence-review-drawer'
+import { EligibilityBadge, EligibilitySummary } from './eligibility-badge'
 import { computeMatchScore, type Criterion } from '@/lib/matching'
 
 type MissionCandidateEntry = {
@@ -235,8 +236,14 @@ export default async function MissionDetailPage({
               {byStage.get(stage.id)?.map((e) => {
                 const candidate = e.candidates
                 if (!candidate) return null
+                // Contrat PR4 : Match Score n'est calculé QUE pour ELIGIBLE — pas
+                // seulement masqué à l'affichage. Un candidat NOT_QUALIFIED ou
+                // INELIGIBLE ne déclenche jamais computeMatchScore, cohérent avec
+                // le schéma Evidence → Eligibility → Score (le score est une
+                // conséquence de l'éligibilité, jamais un calcul indépendant
+                // qu'on filtrerait après coup).
                 const match =
-                  scoringCriteria.length > 0
+                  e.eligibility_status === 'ELIGIBLE' && scoringCriteria.length > 0
                     ? computeMatchScore(
                         scoringCriteria,
                         { title: candidate.title, skills: candidate.skills, location: candidate.location },
@@ -255,7 +262,7 @@ export default async function MissionDetailPage({
                           Arnaud
                         </span>
                       ) : null}
-                      {match ? <span className="font-mono text-xs text-slate">{match.percent}%</span> : null}
+                      <EligibilityBadge status={e.eligibility_status} match={match} />
                       <span className="ml-auto flex items-center gap-2">
                         <EvidenceReviewDrawer
                           candidateId={candidate.id}
@@ -300,6 +307,9 @@ export default async function MissionDetailPage({
                           ) : null}
                         </div>
                       </details>
+                    ) : null}
+                    {e.eligibility_status === 'NOT_QUALIFIED' ? (
+                      <EligibilitySummary criteria={obligatoireCriteria} candidateId={candidate.id} evidenceMap={evidenceByCandidateCriterion} />
                     ) : null}
                   </li>
                 )
