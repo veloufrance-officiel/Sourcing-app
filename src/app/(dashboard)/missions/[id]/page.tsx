@@ -7,6 +7,7 @@ import { AnalyzeBriefForm } from './analyze-brief-form'
 import { AnonymizeCandidateButton } from './anonymize-candidate-button'
 import { EvidenceReviewDrawer, type EvidenceCriterion } from './evidence-review-drawer'
 import { EligibilityBadge, EligibilitySummary } from './eligibility-badge'
+import { GithubSourcingPanel } from './github-sourcing-panel'
 import { computeMatchScore, type Criterion } from '@/lib/matching'
 
 type MissionCandidateEntry = {
@@ -217,7 +218,16 @@ export default async function MissionDetailPage({
       )}
 
       {firstStage ? (
-        <AddCandidateForm missionId={mission.id} stageId={firstStage.id} />
+        <>
+          <AddCandidateForm missionId={mission.id} stageId={firstStage.id} />
+          <div className="mt-3">
+            <GithubSourcingPanel
+              missionId={mission.id}
+              criteriaLabels={obligatoireCriteria.map((c) => c.label)}
+              location={mission.location}
+            />
+          </div>
+        </>
       ) : (
         <p className="mt-6 rounded-xl border border-line bg-amber-soft px-4 py-3 text-sm text-ink">
           Aucun statut de pipeline pour ce tenant. Vérifie que le trigger de seed (migration 0002)
