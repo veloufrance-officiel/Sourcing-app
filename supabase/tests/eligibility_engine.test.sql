@@ -28,7 +28,13 @@ begin
   insert into app_users (id, tenant_id, email, role) values (v_owner, v_tenant, 'test-eligibility-owner@example.invalid', 'owner');
 
   insert into missions (tenant_id, title, source, created_by) values (v_tenant, 'TEST mission eligibility', 'direct', v_owner) returning id into v_mission;
-  insert into candidates (tenant_id, full_name) values (v_tenant, 'TEST candidat eligibility') returning id into v_candidate;
+  -- consent_status='granted' explicite : ce fichier teste le
+  -- recalcul d'eligibility_status et le mecanisme requires_review,
+  -- pas le consentement (couvert separement par PR6). Sans ceci,
+  -- l'insertion en shortlist echouerait desormais sur le Shortlist
+  -- Gate etendu (PR6 etape 1) pour une raison hors du perimetre de ce
+  -- test - trouve via un vrai echec CI, pas anticipe a l'avance.
+  insert into candidates (tenant_id, full_name, consent_status) values (v_tenant, 'TEST candidat eligibility', 'granted') returning id into v_candidate;
   insert into brief_criteria (tenant_id, mission_id, label, weight, source) values (v_tenant, v_mission, 'React obligatoire', 3, 'manual') returning id into v_criterion;
 
   -- --- Sanity check : le trigger sur mission_candidates INSERT calcule
