@@ -58,11 +58,12 @@ export async function importGithubCandidates(
   let importedCount = 0
 
   for (const profile of selected) {
-    // source='github', consent_status='pending' (défaut de la colonne,
-    // jamais 'granted' fourni ici — le recruteur devra explicitement
-    // obtenir et enregistrer le consentement plus tard, ailleurs dans
-    // le produit, avant que ce candidat puisse jamais atteindre une
-    // shortlist).
+    // source='github', github_user_id=profile.id (identifiant numérique
+    // stable, jamais le login mutable), consent_status='pending'
+    // (défaut de la colonne, jamais 'granted' fourni ici — le recruteur
+    // devra explicitement obtenir et enregistrer le consentement plus
+    // tard, ailleurs dans le produit, avant que ce candidat puisse
+    // jamais atteindre une shortlist).
     const { data: candidate, error: candidateError } = await supabase
       .from('candidates')
       .insert({
@@ -72,6 +73,7 @@ export async function importGithubCandidates(
         location: profile.location,
         skills: profile.detectedSkills,
         source: 'github',
+        github_user_id: profile.id,
       })
       .select('id')
       .single()

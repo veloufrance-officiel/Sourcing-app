@@ -30,6 +30,7 @@ vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }))
 vi.mock('@/lib/log', () => ({ logServerError: vi.fn() }))
 
 const sampleProfile: GithubSearchResult = {
+  id: 583231,
   login: 'testdev',
   name: 'Test Dev',
   bio: 'Fullstack',
@@ -79,6 +80,14 @@ describe('importGithubCandidates', () => {
     expect(mockCandidateInsert).toHaveBeenCalledTimes(1)
     const inserted = mockCandidateInsert.mock.calls[0]![0]
     expect(inserted.source).toBe('github')
+  })
+
+  it("persiste github_user_id = profile.id, jamais dérivé du login ni omis — test dédié à la correction github_user_id", async () => {
+    await importGithubCandidates({}, buildFormData([sampleProfile]))
+    const inserted = mockCandidateInsert.mock.calls[0]![0]
+    expect(inserted.github_user_id).toBe(sampleProfile.id)
+    expect(inserted.github_user_id).toBe(583231)
+    expect(typeof inserted.github_user_id).toBe('number')
   })
 
   it("ne fournit JAMAIS consent_status='granted' à l'insertion — reste le défaut de la colonne (pending)", async () => {

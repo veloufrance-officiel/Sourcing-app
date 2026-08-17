@@ -66,6 +66,7 @@ describe('searchGithubCandidates', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
+          id: 583231,
           login: 'testuser',
           name: 'Test User',
           bio: 'Fullstack dev',
@@ -109,5 +110,33 @@ describe('searchGithubCandidates', () => {
 
     const result = await searchGithubCandidates({}, buildFormData({ criteria_labels: 'TypeScript|Python' }))
     expect(result.results).toHaveLength(1) // un seul, pas deux malgré les deux requêtes
+  })
+
+  it("capture explicitement l'id numérique GitHub (user.id), jamais seulement le login — test dédié à la correction github_user_id", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ items: [{ login: 'octocat' }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 583231, // vrai ID numérique GitHub, distinct du login
+          login: 'octocat',
+          name: 'The Octocat',
+          bio: null,
+          location: null,
+          company: null,
+          html_url: 'https://github.com/octocat',
+          public_repos: 8,
+        }),
+      })
+
+    const result = await searchGithubCandidates({}, buildFormData({ criteria_labels: 'TypeScript' }))
+    expect(result.results).toHaveLength(1)
+    expect(result.results![0]!.id).toBe(583231)
+    expect(typeof result.results![0]!.id).toBe('number')
+    // login capturé aussi, mais l'id ne doit jamais dépendre de lui
+    expect(result.results![0]!.login).toBe('octocat')
   })
 })

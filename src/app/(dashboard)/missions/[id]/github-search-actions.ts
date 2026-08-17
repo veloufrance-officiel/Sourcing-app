@@ -11,6 +11,7 @@ import { logServerError } from '@/lib/log'
 // automatiquement.
 
 export type GithubSearchResult = {
+  id: number
   login: string
   name: string | null
   bio: string | null
@@ -123,6 +124,7 @@ export async function searchGithubCandidates(
         })
         if (!userRes.ok) continue // profil individuel indisponible, on ignore plutôt que de faire échouer le lot
         const user = (await userRes.json()) as {
+          id: number
           login: string
           name: string | null
           bio: string | null
@@ -135,6 +137,7 @@ export async function searchGithubCandidates(
         // Signal détecté = le langage qui a produit cette requête. Reste
         // un signal brut à ce stade, jamais transformé en evidence ici.
         detailed.push({
+          id: user.id,
           login: user.login,
           name: user.name,
           bio: user.bio,
