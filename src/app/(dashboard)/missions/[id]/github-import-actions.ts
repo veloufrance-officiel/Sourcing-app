@@ -55,9 +55,28 @@ export async function importGithubCandidates(
     .eq('mission_id', missionId)
     .eq('weight', 3)
 
+  // Second contrôle, indépendant du filtrage déjà fait dans
+  // searchGithubCandidates — garde-fou d'intégrité, pas seulement
+  // fonctionnel : même si ce filtre en amont était contourné ou
+  // absent (résultats obtenus autrement), aucun candidat opposé ne
+  // peut être créé ici. Une seule requête avant la boucle, pas une par
+  // profil.
+  const { data: oppositions } = await supabase
+    .from('contact_oppositions')
+    .select('github_user_id')
+    .eq('tenant_id', appUser.tenant_id)
+  const opposedIds = new Set((oppositions ?? []).map((o) => o.github_user_id))
+
   let importedCount = 0
 
   for (const profile of selected) {
+    if (opposedIds.has(profile.id)) {
+      logServerError('github.import.opposedSkipped', new Error('Profil opposé, import refusé'), {
+        tenantId: appUser.tenant_id,
+        githubUserId: profile.id,
+      })
+      continue // jamais d'insert pour ce profil précis, les autres du lot continuent
+    }
     // source='github', github_user_id=profile.id (identifiant numérique
     // stable, jamais le login mutable), consent_status='pending'
     // (défaut de la colonne, jamais 'granted' fourni ici — le recruteur

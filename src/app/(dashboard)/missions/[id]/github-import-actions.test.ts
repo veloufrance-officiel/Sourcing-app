@@ -9,6 +9,7 @@ const mockGetUser = vi.fn()
 const mockSingle = vi.fn()
 const mockStageSelect = vi.fn()
 const mockCriteriaSelect = vi.fn()
+const mockOppositionsEq = vi.fn()
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => ({
@@ -21,6 +22,7 @@ vi.mock('@/lib/supabase/server', () => ({
       if (table === 'pipeline_stages')
         return { select: () => ({ eq: () => ({ order: () => ({ limit: () => ({ single: mockStageSelect }) }) }) }) }
       if (table === 'brief_criteria') return { select: () => ({ eq: () => ({ eq: mockCriteriaSelect }) }) }
+      if (table === 'contact_oppositions') return { select: () => ({ eq: mockOppositionsEq }) }
       throw new Error(`Table non mockée : ${table}`)
     },
   })),
@@ -55,6 +57,7 @@ describe('importGithubCandidates', () => {
     mockSingle.mockResolvedValue({ data: { tenant_id: 'tenant-1' } })
     mockStageSelect.mockResolvedValue({ data: { id: 'stage-1' } })
     mockCriteriaSelect.mockResolvedValue({ data: [{ id: 'crit-1', label: 'TypeScript' }] })
+    mockOppositionsEq.mockResolvedValue({ data: [] }) // aucune opposition par défaut
     mockCandidateInsert.mockReturnValue({
       select: () => ({ single: () => Promise.resolve({ data: { id: 'candidate-1' }, error: null }) }),
     })
@@ -88,6 +91,23 @@ describe('importGithubCandidates', () => {
     expect(inserted.github_user_id).toBe(sampleProfile.id)
     expect(inserted.github_user_id).toBe(583231)
     expect(typeof inserted.github_user_id).toBe('number')
+  })
+
+  it('refuse de créer un candidat pour un profil déjà opposé — garde-fou défensif avant tout insert', async () => {
+    mockOppositionsEq.mockResolvedValue({ data: [{ github_user_id: sampleProfile.id }] })
+    const result = await importGithubCandidates({}, buildFormData([sampleProfile]))
+    expect(mockCandidateInsert).not.toHaveBeenCalled()
+    expect(result.error).toBeDefined()
+  })
+
+  it('un profil opposé dans un lot de plusieurs est ignoré, les autres continuent normalement', async () => {
+    const secondProfile: GithubSearchResult = { ...sampleProfile, id: 999999999, login: 'seconddev' }
+    mockOppositionsEq.mockResolvedValue({ data: [{ github_user_id: sampleProfile.id }] }) // seul le premier est opposé
+    const result = await importGithubCandidates({}, buildFormData([sampleProfile, secondProfile]))
+    expect(mockCandidateInsert).toHaveBeenCalledTimes(1)
+    const inserted = mockCandidateInsert.mock.calls[0]![0]
+    expect(inserted.github_user_id).toBe(999999999) // le second, jamais le premier (opposé)
+    expect(result.imported).toBe(1)
   })
 
   it("ne fournit JAMAIS consent_status='granted' à l'insertion — reste le défaut de la colonne (pending)", async () => {
