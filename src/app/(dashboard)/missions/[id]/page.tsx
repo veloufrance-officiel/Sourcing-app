@@ -5,11 +5,13 @@ import { createClient } from '@/lib/supabase/server'
 import { AddCandidateForm } from './add-candidate-form'
 import { AnalyzeBriefForm } from './analyze-brief-form'
 import { AnonymizeCandidateButton } from './anonymize-candidate-button'
+import { EvidenceReviewDrawer, type EvidenceCriterion } from './evidence-review-drawer'
 import { computeMatchScore, type Criterion } from '@/lib/matching'
 
 type MissionCandidateEntry = {
   id: string
   stage_id: string
+  eligibility_status: 'ELIGIBLE' | 'NOT_QUALIFIED' | 'INELIGIBLE'
   candidates: {
     id: string
     full_name: string
@@ -18,6 +20,16 @@ type MissionCandidateEntry = {
     location: string | null
     qualified_by: string | null
   } | null
+}
+
+type EvidenceRow = {
+  candidate_id: string
+  criterion_id: string
+  status: 'VERIFIED' | 'NOT_VERIFIED' | 'CONTRADICTED' | 'INFERRED_UNCONFIRMED'
+  source_type: string
+  verification_method: string | null
+  verified_at: string | null
+  retrieved_at: string
 }
 
 type MissionDetail = {
@@ -56,7 +68,7 @@ export default async function MissionDetailPage({
 
   const { data: entries } = await supabase
     .from('mission_candidates')
-    .select('id, stage_id, candidates(id, full_name, title, skills, location, qualified_by)')
+    .select('id, stage_id, eligibility_status, candidates(id, full_name, title, skills, location, qualified_by)')
     .eq('mission_id', id)
     .returns<MissionCandidateEntry[]>()
 
@@ -65,6 +77,39 @@ export default async function MissionDetailPage({
     .select('id, label, weight, source')
     .eq('mission_id', id)
     .order('weight', { ascending: false })
+
+  const obligatoireCriteria = (criteria ?? []).filter((c) => c.weight === 3)
+  const candidateIds = (entries ?? []).map((e) => e.candidates?.id).filter((v): v is string => Boolean(v))
+
+  // Evidence : une seule requête pour tous les candidats de la mission,
+  // groupée ensuite en mémoire. superseded_by is null = ligne active
+  // (jamais remplacée par une preuve plus récente) — même filtre que
+  // celui qu'applique internal.recalculate_eligibility côté DB, pour
+  // que ce que le drawer affiche corresponde exactement à ce qui a
+  // déterminé eligibility_status.
+  const { data: evidenceRows } =
+    candidateIds.length > 0 && obligatoireCriteria.length > 0
+      ? await supabase
+          .from('evidence')
+          .select('candidate_id, criterion_id, status, source_type, verification_method, verified_at, retrieved_at')
+          .in('candidate_id', candidateIds)
+          .in(
+            'criterion_id',
+            obligatoireCriteria.map((c) => c.id)
+          )
+          .is('superseded_by', null)
+          .order('retrieved_at', { ascending: false })
+          .returns<EvidenceRow[]>()
+      : { data: [] as EvidenceRow[] }
+
+  // Le plus récent par (candidat, critère) — evidenceRows est déjà trié
+  // par retrieved_at décroissant, donc le premier rencontré pour chaque
+  // paire est le bon.
+  const evidenceByCandidateCriterion = new Map<string, EvidenceRow>()
+  ;(evidenceRows ?? []).forEach((row) => {
+    const key = `${row.candidate_id}:${row.criterion_id}`
+    if (!evidenceByCandidateCriterion.has(key)) evidenceByCandidateCriterion.set(key, row)
+  })
 
   const scoringCriteria: Criterion[] = (criteria ?? []).map((c) => ({ label: c.label, weight: c.weight }))
 
@@ -211,7 +256,25 @@ export default async function MissionDetailPage({
                         </span>
                       ) : null}
                       {match ? <span className="font-mono text-xs text-slate">{match.percent}%</span> : null}
-                      <span className="ml-auto">
+                      <span className="ml-auto flex items-center gap-2">
+                        <EvidenceReviewDrawer
+                          candidateId={candidate.id}
+                          candidateName={candidate.full_name}
+                          missionId={mission.id}
+                          eligibilityStatus={e.eligibility_status}
+                          criteria={obligatoireCriteria.map((c): EvidenceCriterion => {
+                            const ev = evidenceByCandidateCriterion.get(`${candidate.id}:${c.id}`)
+                            return {
+                              criterionId: c.id,
+                              label: c.label,
+                              weight: c.weight,
+                              status: ev?.status ?? null,
+                              sourceType: ev?.source_type ?? null,
+                              verificationMethod: ev?.verification_method ?? null,
+                              verifiedAt: ev?.verified_at ?? null,
+                            }
+                          })}
+                        />
                         <AnonymizeCandidateButton
                           candidateId={candidate.id}
                           missionId={mission.id}
