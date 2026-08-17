@@ -32,6 +32,12 @@ export async function addCandidateToShortlist(
 
   if (error) {
     logServerError('shortlists.addCandidate', error, { tenantId: appUser.tenant_id, shortlistId })
+    // Le trigger DB (internal.enforce_shortlist_eligibility_gate) est
+    // l'autorité réelle — ce code ne fait que traduire son message en
+    // erreur utilisateur lisible, jamais l'inverse.
+    if (error.message.includes('non éligible') || error.message.includes('pas encore été évalué')) {
+      return { error: 'Ce profil n\u2019est pas encore éligible pour cette mission — vérifie ses preuves avant de l\u2019ajouter.' }
+    }
     return { error: 'Impossible d\u2019ajouter ce profil (déjà présent ?).' }
   }
 
