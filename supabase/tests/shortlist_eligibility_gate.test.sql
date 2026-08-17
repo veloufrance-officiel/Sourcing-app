@@ -32,7 +32,14 @@ begin
   insert into brief_criteria (tenant_id, mission_id, label, weight, source) values (v_tenant_a, v_mission, 'Crit A', 3, 'manual') returning id into v_crit_a;
   insert into brief_criteria (tenant_id, mission_id, label, weight, source) values (v_tenant_a, v_mission, 'Crit B', 3, 'manual') returning id into v_crit_b;
 
-  insert into candidates (tenant_id, full_name) values (v_tenant_a, 'Candidat ELIGIBLE') returning id into v_candidate_eligible;
+  -- consent_status='granted' explicite sur le candidat cense reussir
+  -- l'insertion en shortlist (cas 1). Sans ceci, le test echouerait
+  -- desormais sur le volet consentement du Shortlist Gate (PR6 etape 1),
+  -- hors du perimetre original de ce fichier (qui teste eligibility_status
+  -- uniquement) - trouve via un vrai echec CI sur eligibility_engine.test.sql,
+  -- corrige ici aussi par la meme analyse plutot que d'attendre un
+  -- second echec separe sur ce fichier precisement.
+  insert into candidates (tenant_id, full_name, consent_status) values (v_tenant_a, 'Candidat ELIGIBLE', 'granted') returning id into v_candidate_eligible;
   insert into candidates (tenant_id, full_name) values (v_tenant_a, 'Candidat NOT_QUALIFIED') returning id into v_candidate_notq;
   insert into candidates (tenant_id, full_name) values (v_tenant_a, 'Candidat INELIGIBLE') returning id into v_candidate_ineligible;
   insert into candidates (tenant_id, full_name) values (v_tenant_b, 'Candidat autre tenant') returning id into v_candidate_other_tenant;
