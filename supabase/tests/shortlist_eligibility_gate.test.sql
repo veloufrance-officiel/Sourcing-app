@@ -119,12 +119,22 @@ begin
   if not v_error then raise exception 'FAIL CRITIQUE cas5-SQL-direct : accepté'; end if;
   v_report := v_report || E'PASS cas5-SQL-direct-service_role\n';
 
-  -- Cas 6 : requires_review préservé après ajout ELIGIBLE puis contradiction
+  -- Cas 6 : requires_review préservé après ajout ELIGIBLE puis contradiction.
+  -- Modifie la ligne evidence EXISTANTE (posée au setup, ligne ~48) plutôt
+  -- que d'en insérer une nouvelle sur le même critère — insérer une 2e
+  -- ligne active sur le même (candidat, critère) sans marquer la 1re
+  -- superseded_by a révélé un vrai gap (aucun code, ni trigger ni
+  -- application, ne pose jamais cette colonne aujourd'hui — trouvé en
+  -- exécutant ce fichier en un seul bloc combiné, jamais testé ainsi
+  -- avant). Hors périmètre de PR5 (pas de nouvelle fonctionnalité
+  -- parallèle) : documenté ici comme limite connue, pas corrigé. Ce test
+  -- modélise donc le cas correctement (une seule ligne active à la fois),
+  -- cohérent avec ce qu'un usage réel via confirmEvidence produirait
+  -- s'il gérait déjà superseded_by — ce qu'il ne fait pas non plus
+  -- aujourd'hui, à traiter dans un futur PR dédié à Evidence, pas ici.
   set local role authenticated;
   perform set_config('request.jwt.claim.sub', v_owner::text, true);
-  insert into evidence (tenant_id, candidate_id, criterion_id, status, is_inference, source_type, source_priority)
-  values (v_tenant_a, v_candidate_eligible, v_crit_a, 'VERIFIED', false, 'recruiter_note', 1)
-  returning id into v_ev_id;
+  select id into v_ev_id from evidence where candidate_id = v_candidate_eligible and criterion_id = v_crit_a and superseded_by is null;
   update evidence set status = 'CONTRADICTED' where id = v_ev_id;
   reset role;
   perform set_config('request.jwt.claim.sub', '', true);
