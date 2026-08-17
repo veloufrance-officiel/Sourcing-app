@@ -6,6 +6,21 @@ vi.mock('@/lib/log', () => ({ logServerError: vi.fn() }))
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
 
+const mockGetUser = vi.fn()
+const mockAppUserSingle = vi.fn()
+const mockOppositionsEq = vi.fn()
+
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(async () => ({
+    auth: { getUser: mockGetUser },
+    from: (table: string) => {
+      if (table === 'app_users') return { select: () => ({ eq: () => ({ single: mockAppUserSingle }) }) }
+      if (table === 'contact_oppositions') return { select: () => ({ eq: mockOppositionsEq }) }
+      throw new Error(`Table non mockée : ${table}`)
+    },
+  })),
+}))
+
 function buildFormData(overrides: Record<string, string> = {}): FormData {
   const fd = new FormData()
   fd.set('mission_id', overrides.mission_id ?? 'mission-1')
@@ -18,6 +33,9 @@ describe('searchGithubCandidates', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     process.env.GITHUB_SEARCH_TOKEN = 'test-token'
+    mockGetUser.mockResolvedValue({ data: { user: { id: 'user-1' } } })
+    mockAppUserSingle.mockResolvedValue({ data: { tenant_id: 'tenant-1' } })
+    mockOppositionsEq.mockResolvedValue({ data: [] }) // aucune opposition par défaut
   })
 
   it('rejette sans mission_id', async () => {
@@ -66,6 +84,7 @@ describe('searchGithubCandidates', () => {
       .mockResolvedValueOnce({
         ok: true,
         json: async () => ({
+          id: 583231,
           login: 'testuser',
           name: 'Test User',
           bio: 'Fullstack dev',
@@ -109,5 +128,74 @@ describe('searchGithubCandidates', () => {
 
     const result = await searchGithubCandidates({}, buildFormData({ criteria_labels: 'TypeScript|Python' }))
     expect(result.results).toHaveLength(1) // un seul, pas deux malgré les deux requêtes
+  })
+
+  it("capture explicitement l'id numérique GitHub (user.id), jamais seulement le login — test dédié à la correction github_user_id", async () => {
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ items: [{ login: 'octocat' }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 583231, // vrai ID numérique GitHub, distinct du login
+          login: 'octocat',
+          name: 'The Octocat',
+          bio: null,
+          location: null,
+          company: null,
+          html_url: 'https://github.com/octocat',
+          public_repos: 8,
+        }),
+      })
+
+    const result = await searchGithubCandidates({}, buildFormData({ criteria_labels: 'TypeScript' }))
+    expect(result.results).toHaveLength(1)
+    expect(result.results![0]!.id).toBe(583231)
+    expect(typeof result.results![0]!.id).toBe('number')
+    // login capturé aussi, mais l'id ne doit jamais dépendre de lui
+    expect(result.results![0]!.login).toBe('octocat')
+  })
+
+  it("filtre un profil déjà opposé — n'apparaît jamais dans les résultats, même brièvement", async () => {
+    mockOppositionsEq.mockResolvedValue({ data: [{ github_user_id: 583231 }] })
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ items: [{ login: 'octocat' }] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          id: 583231, // même ID que l'opposition mockée
+          login: 'octocat',
+          name: 'The Octocat',
+          bio: null,
+          location: null,
+          company: null,
+          html_url: 'https://github.com/octocat',
+          public_repos: 8,
+        }),
+      })
+
+    const result = await searchGithubCandidates({}, buildFormData({ criteria_labels: 'TypeScript' }))
+    // Aucun résultat — le seul profil trouvé était opposé, filtré avant
+    // même d'être ajouté à la liste retournée.
+    expect(result.results).toBeUndefined()
+    expect(result.error).toBeDefined()
+  })
+
+  it('un profil non opposé continue de passer normalement (pas de faux positif sur le filtre)', async () => {
+    mockOppositionsEq.mockResolvedValue({ data: [{ github_user_id: 999999999 }] }) // un ID différent
+    mockFetch
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ items: [{ login: 'octocat' }] }) })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ id: 583231, login: 'octocat', name: null, bio: null, location: null, company: null, html_url: 'https://github.com/octocat', public_repos: 1 }),
+      })
+
+    const result = await searchGithubCandidates({}, buildFormData({ criteria_labels: 'TypeScript' }))
+    expect(result.results).toHaveLength(1)
   })
 })

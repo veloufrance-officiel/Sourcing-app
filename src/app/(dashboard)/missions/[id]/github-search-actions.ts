@@ -1,5 +1,6 @@
 'use server'
 
+import { createClient } from '@/lib/supabase/server'
 import { logServerError } from '@/lib/log'
 
 // Aucune écriture en base ici, volontairement. Cette action ne fait que
@@ -11,6 +12,7 @@ import { logServerError } from '@/lib/log'
 // automatiquement.
 
 export type GithubSearchResult = {
+  id: number
   login: string
   name: string | null
   bio: string | null
@@ -88,6 +90,27 @@ export async function searchGithubCandidates(
     return { error: 'Recherche GitHub indisponible pour le moment.' }
   }
 
+  // Lecture, pas d'écriture — cette action reste conforme à son
+  // principe d'origine (aucune modification de base). Nécessaire pour
+  // filtrer les profils opposés AVANT qu'ils n'apparaissent au
+  // recruteur : protection fonctionnelle + minimisation, pas seulement
+  // un garde-fou d'intégrité à l'import (qui reste en place séparément,
+  // défense en profondeur).
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return { error: 'Session expirée.' }
+
+  const { data: appUser } = await supabase.from('app_users').select('tenant_id').eq('id', user.id).single()
+  if (!appUser) return { error: 'Compte non rattaché à un tenant.' }
+
+  const { data: oppositions } = await supabase
+    .from('contact_oppositions')
+    .select('github_user_id')
+    .eq('tenant_id', appUser.tenant_id)
+  const opposedIds = new Set((oppositions ?? []).map((o) => o.github_user_id))
+
   try {
     const loginsSeen = new Set<string>()
     const detailed: GithubSearchResult[] = []
@@ -123,6 +146,7 @@ export async function searchGithubCandidates(
         })
         if (!userRes.ok) continue // profil individuel indisponible, on ignore plutôt que de faire échouer le lot
         const user = (await userRes.json()) as {
+          id: number
           login: string
           name: string | null
           bio: string | null
@@ -134,7 +158,13 @@ export async function searchGithubCandidates(
 
         // Signal détecté = le langage qui a produit cette requête. Reste
         // un signal brut à ce stade, jamais transformé en evidence ici.
+        // Filtré ICI, avant d'être ajouté aux résultats — un profil
+        // opposé n'apparaît jamais, même brièvement, dans ce que le
+        // recruteur voit.
+        if (opposedIds.has(user.id)) continue
+
         detailed.push({
+          id: user.id,
           login: user.login,
           name: user.name,
           bio: user.bio,
