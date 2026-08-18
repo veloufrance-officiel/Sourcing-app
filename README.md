@@ -67,7 +67,7 @@ Présentation orientée métier : [`docs/CLIENT.md`](./docs/CLIENT.md).
 ## Tests
 
 ```
-npm run test        # suite Vitest — 105 tests au 84af3a1
+npm run test        # suite Vitest — 105 tests au 1e35085
 npm run lint
 npm run typecheck
 npm run build
