@@ -97,6 +97,32 @@ jobs:
             echo "::error::$ERROR_TEXT"
             exit $EXIT_CODE
           fi
+      - name: Lancer les tests du trigger opposed contre la stack locale réelle
+        run: |
+          set +e
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/opposed_creates_contact_opposition.test.sql > /tmp/psql_output5.txt 2>&1
+          EXIT_CODE=$?
+          cat /tmp/psql_output5.txt
+          if [ $EXIT_CODE -ne 0 ]; then
+            ERROR_TEXT=$(cat /tmp/psql_output5.txt | tr '\n' ' ' | tr '%' ' ' | head -c 1000)
+            echo "::error::$ERROR_TEXT"
+            exit $EXIT_CODE
+          fi
+      - name: Lancer les tests de rétention des oppositions contre la stack locale réelle
+        run: |
+          set +e
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/contact_oppositions_retention.test.sql > /tmp/psql_output6.txt 2>&1
+          EXIT_CODE=$?
+          cat /tmp/psql_output6.txt
+          if [ $EXIT_CODE -ne 0 ]; then
+            ERROR_TEXT=$(cat /tmp/psql_output6.txt | tr '\n' ' ' | tr '%' ' ' | head -c 1000)
+            echo "::error::$ERROR_TEXT"
+            exit $EXIT_CODE
+          fi
       - name: Arrêter Supabase
         if: always()
         run: supabase stop
