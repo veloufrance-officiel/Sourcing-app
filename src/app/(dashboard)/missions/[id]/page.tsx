@@ -8,6 +8,7 @@ import { AnonymizeCandidateButton } from './anonymize-candidate-button'
 import { EvidenceReviewDrawer, type EvidenceCriterion } from './evidence-review-drawer'
 import { EligibilityBadge, EligibilitySummary } from './eligibility-badge'
 import { GithubSourcingPanel } from './github-sourcing-panel'
+import { CandidateContactPanel, type ExistingContact } from './candidate-contact-panel'
 import { computeMatchScore, type Criterion } from '@/lib/matching'
 
 type MissionCandidateEntry = {
@@ -21,6 +22,8 @@ type MissionCandidateEntry = {
     skills: string[] | null
     location: string | null
     qualified_by: string | null
+    source: string | null
+    github_user_id: number | null
   } | null
 }
 
@@ -70,7 +73,7 @@ export default async function MissionDetailPage({
 
   const { data: entries } = await supabase
     .from('mission_candidates')
-    .select('id, stage_id, eligibility_status, candidates(id, full_name, title, skills, location, qualified_by)')
+    .select('id, stage_id, eligibility_status, candidates(id, full_name, title, skills, location, qualified_by, source, github_user_id)')
     .eq('mission_id', id)
     .returns<MissionCandidateEntry[]>()
 
@@ -111,6 +114,25 @@ export default async function MissionDetailPage({
   ;(evidenceRows ?? []).forEach((row) => {
     const key = `${row.candidate_id}:${row.criterion_id}`
     if (!evidenceByCandidateCriterion.has(key)) evidenceByCandidateCriterion.set(key, row)
+  })
+
+  // Contacts déjà envoyés — une seule requête groupée, pas une par
+  // candidat, même principe que evidenceRows ci-dessus. app_users
+  // jointe pour afficher le nom de qui a contacté, pas juste un uuid.
+  const { data: contactRows } =
+    candidateIds.length > 0
+      ? await supabase
+          .from('candidate_contacts')
+          .select('id, candidate_id, mission_id, sent_at, response, missions(title), app_users(email)')
+          .in('candidate_id', candidateIds)
+          .order('sent_at', { ascending: false })
+      : { data: [] }
+
+  const contactsByCandidate = new Map<string, typeof contactRows>()
+  ;(contactRows ?? []).forEach((row) => {
+    const list = contactsByCandidate.get(row.candidate_id) ?? []
+    list.push(row)
+    contactsByCandidate.set(row.candidate_id, list)
   })
 
   const scoringCriteria: Criterion[] = (criteria ?? []).map((c) => ({ label: c.label, weight: c.weight }))
@@ -289,6 +311,24 @@ export default async function MissionDetailPage({
                               sourceType: ev?.source_type ?? null,
                               verificationMethod: ev?.verification_method ?? null,
                               verifiedAt: ev?.verified_at ?? null,
+                            }
+                          })}
+                        />
+                        <CandidateContactPanel
+                          candidateId={candidate.id}
+                          candidateName={candidate.full_name}
+                          missionId={mission.id}
+                          missionTitle={mission.title}
+                          isGithubSourced={candidate.source === 'github'}
+                          existingContacts={(contactsByCandidate.get(candidate.id) ?? []).map((c): ExistingContact => {
+                            const missionTitleFromJoin = Array.isArray(c.missions) ? c.missions[0]?.title : (c.missions as { title: string } | null)?.title
+                            const emailFromJoin = Array.isArray(c.app_users) ? c.app_users[0]?.email : (c.app_users as { email: string } | null)?.email
+                            return {
+                              id: c.id,
+                              missionTitle: missionTitleFromJoin ?? mission.title,
+                              sentAt: c.sent_at,
+                              sentByName: emailFromJoin ?? null,
+                              response: c.response as ExistingContact['response'],
                             }
                           })}
                         />
