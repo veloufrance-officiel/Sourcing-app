@@ -67,7 +67,7 @@ Présentation orientée métier : [`docs/CLIENT.md`](./docs/CLIENT.md).
 ## Tests
 
 ```
-npm run test        # suite Vitest — 105 tests au 1e35085
+npm run test        # suite Vitest — nombre de tests évolutif, vérifier avec la commande
 npm run lint
 npm run typecheck
 npm run build
@@ -81,7 +81,7 @@ Les tests SQL (isolation RLS/RBAC, moteur d'éligibilité, vérification humaine
 - Pipeline mission → brief IA → candidats → preuves → éligibilité → score → shortlist
 - Sourcing GitHub public (recherche à la demande, sélection explicite avant import, jamais automatique)
 - Mécanisme de contact candidat (génération de message, traçabilité, réponse, opposition)
-- Rétention RGPD différenciée (candidats : 2 ans ; liste d'opposition : 3 ans), cron quotidien
+- Rétention RGPD différenciée (candidats jusqu'à 2 ans ; liste d'opposition : au minimum 3 ans), cron quotidien
 - RBAC, isolation multi-tenant, audit trail append-only
 
 **Explicitement absent, pas une fonctionnalité cachée :**

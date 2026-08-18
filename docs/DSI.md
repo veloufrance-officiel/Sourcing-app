@@ -4,14 +4,14 @@
 
 ## 1. Architecture applicative
 
-Next.js 16 (App Router) en frontal, Server Actions comme unique point d'écriture entre l'UI et Supabase — aucune API REST/GraphQL intermédiaire à ce stade. Supabase fournit Postgres, l'authentification (Auth), et Row Level Security comme mécanisme d'isolation principal.
+Next.js 16 (App Router) en frontal, Server Actions comme unique point d'écriture applicatif entre l'UI et Supabase — pas de couche API REST/GraphQL propre à ce projet à ce stade (Supabase expose sa propre API PostgREST en interne, mais l'application ne construit aucune API intermédiaire par-dessus). Supabase fournit Postgres, l'authentification (Auth), et Row Level Security comme mécanisme d'isolation principal.
 
 ```
 Navigateur
     ↓
 Next.js Server Action (session utilisateur, jamais service_role côté UI)
     ↓
-Supabase (Postgres) — RLS appliqué sur chaque requête
+Supabase (Postgres) — RLS appliqué sur chaque requête soumise à policy
     ↓
 Triggers/contraintes DB — autorité finale sur certains invariants (détaillé section 4)
 ```
@@ -42,7 +42,7 @@ Règles dures appliquées par trigger, pas seulement par policy (`internal.preve
 
 ## 4. Fonctions `SECURITY DEFINER` — liste exhaustive
 
-Une fonction `SECURITY DEFINER` s'exécute avec les privilèges de son propriétaire (`postgres`), pas de l'appelant — elle contourne donc RLS par construction et doit être auditée individuellement. Liste complète, vérifiée par requête sur `pg_proc.prosecdef` :
+Une fonction `SECURITY DEFINER` s'exécute avec les privilèges de son propriétaire (`postgres`), pas de l'appelant — c'est le comportement standard de PostgreSQL pour ce type de fonction, pas une omission de ce projet. Elle échappe donc à RLS par ce mécanisme, et chacune doit être auditée individuellement pour cette raison. Liste complète, vérifiée par requête sur `pg_proc.prosecdef` :
 
 | Fonction | Schéma | Rôle |
 |---|---|---|
@@ -128,10 +128,10 @@ Le contrôle applicatif reste en place pour l'UX (retour immédiat d'une erreur 
 
 Deux politiques distinctes, deux finalités distinctes :
 
-| Table | Durée | Justification |
+| Table | Durée cible | Justification |
 |---|---|---|
-| `candidates` | 2 ans | Donnée de candidature active |
-| `contact_oppositions` | 3 ans minimum | Liste repoussoir — recommandation CNIL vérifiée sur source primaire (cnil.fr), spécifique à ce type de donnée, distincte de la durée de candidature |
+| `candidates` | jusqu'à 2 ans | Donnée de candidature active |
+| `contact_oppositions` | au minimum 3 ans | Liste repoussoir — recommandation CNIL vérifiée sur source primaire (cnil.fr), spécifique à ce type de donnée, distincte de la durée de candidature |
 
 Deux fonctions de purge distinctes (`enforce_data_retention`, `enforce_opposition_retention`), toutes deux réservées à `service_role`, appelées par un cron quotidien unique (`/api/cron/rgpd-retention`, `30 3 * * *`) avec isolation d'erreur explicite entre les deux — l'échec de l'une n'empêche jamais l'exécution de l'autre.
 
@@ -150,7 +150,7 @@ Deux fonctions de purge distinctes (`enforce_data_retention`, `enforce_oppositio
 
 ## 12. Tests et CI
 
-105 tests Vitest (Server Actions, composants). 7 fichiers de tests SQL exécutés en CI contre une stack Supabase locale **fraîchement provisionnée** à chaque run (pas un environnement persistant) : isolation RLS/RBAC, moteur d'éligibilité, vérification humaine Evidence, shortlist gate, trigger d'opposition, rétention, sérialisation contact/opposition.
+105 tests Vitest au moment de la rédaction (Server Actions, composants) — chiffre évolutif, `npm run test` fait foi. 7 fichiers de tests SQL exécutés en CI contre une stack Supabase locale **fraîchement provisionnée** à chaque run (pas un environnement persistant) : isolation RLS/RBAC, moteur d'éligibilité, vérification humaine Evidence, shortlist gate, trigger d'opposition, rétention, sérialisation contact/opposition.
 
 ## 13. Limites de sécurité connues, non résolues à ce jour
 
