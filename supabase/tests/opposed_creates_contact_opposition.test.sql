@@ -19,6 +19,7 @@ declare
   v_after int;
   v_error boolean;
   v_report text := '';
+  v_contact3_id uuid;
 begin
   insert into tenants (name) values ('TEST opposed trigger main') returning id into v_tenant;
   insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data)
@@ -56,15 +57,22 @@ begin
   if v_after != 1 then raise exception 'FAIL cas2 : attendu 1 après update, obtenu %', v_after; end if;
   v_report := v_report || E'PASS cas2 (UPDATE interested->opposed)\n';
 
-  -- === Cas 3 : idempotence, deux opposed successifs sur le même candidat ===
+  -- === Cas 3 : idempotence, deux UPDATE successifs vers/en opposed sur
+  -- le même contact (chemin réel recordCandidateResponse). Corrigé
+  -- après ajout du verrou (0028) : un second INSERT opposed sur le
+  -- même candidat est désormais bloqué par le nouveau trigger
+  -- BEFORE INSERT (comportement voulu, pas une régression) — ce test
+  -- ne peut plus modéliser l'idempotence via deux INSERT successifs,
+  -- il le fait via le vrai chemin UPDATE à la place. ===
   insert into candidates (tenant_id, full_name, source, github_user_id)
   values (v_tenant, 'Candidat cas3', 'github', 200000003) returning id into v_candidate3;
   set local role authenticated;
   perform set_config('request.jwt.claim.sub', v_owner::text, true);
   insert into candidate_contacts (tenant_id, candidate_id, mission_id, message_sent, legal_basis, response, responded_at, sent_by)
-  values (v_tenant, v_candidate3, v_mission, 'Cas3 premier', 'legitimate_interest', 'opposed', now(), v_owner);
-  insert into candidate_contacts (tenant_id, candidate_id, mission_id, message_sent, legal_basis, response, responded_at, sent_by)
-  values (v_tenant, v_candidate3, v_mission, 'Cas3 second', 'legitimate_interest', 'opposed', now(), v_owner);
+  values (v_tenant, v_candidate3, v_mission, 'Cas3', 'legitimate_interest', 'interested', now(), v_owner)
+  returning id into v_contact3_id;
+  update candidate_contacts set response = 'opposed' where id = v_contact3_id;
+  update candidate_contacts set responded_at = now() where id = v_contact3_id;
   reset role;
   perform set_config('request.jwt.claim.sub', '', true);
   select count(*) into v_opposition_count from contact_oppositions where tenant_id = v_tenant and github_user_id = 200000003;

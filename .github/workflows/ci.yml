@@ -123,6 +123,19 @@ jobs:
             echo "::error::$ERROR_TEXT"
             exit $EXIT_CODE
           fi
+      - name: Lancer les tests de sérialisation contact/opposition contre la stack locale réelle
+        run: |
+          set +e
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/serialize_contact_opposition_race.test.sql > /tmp/psql_output7.txt 2>&1
+          EXIT_CODE=$?
+          cat /tmp/psql_output7.txt
+          if [ $EXIT_CODE -ne 0 ]; then
+            ERROR_TEXT=$(cat /tmp/psql_output7.txt | tr '\n' ' ' | tr '%' ' ' | head -c 1000)
+            echo "::error::$ERROR_TEXT"
+            exit $EXIT_CODE
+          fi
       - name: Arrêter Supabase
         if: always()
         run: supabase stop
