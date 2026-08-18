@@ -1,6 +1,6 @@
 # SourcingOS — Document technique (DSI / CTO / responsable sécurité)
 
-État du dépôt documenté : `main @ 84af3a1`. Chaque affirmation ci-dessous a été vérifiée directement contre le schéma réel de la base ou le code source au moment de la rédaction — pas de mémoire, pas de supposition. Là où une garantie est partielle ou absente, c'est nommé explicitement.
+État du dépôt documenté : `main @ 1e35085`. Chaque affirmation ci-dessous a été vérifiée directement contre le schéma réel de la base ou le code source au moment de la rédaction — pas de mémoire, pas de supposition. Là où une garantie est partielle ou absente, c'est nommé explicitement.
 
 ## 1. Architecture applicative
 
