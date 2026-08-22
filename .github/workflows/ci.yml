@@ -139,3 +139,43 @@ jobs:
       - name: Arrêter Supabase
         if: always()
         run: supabase stop
+
+  # Filet CI pour mobile/ — confirme que le projet compile réellement
+  # (lint + typecheck + expo export), sans jamais lancer de simulateur
+  # (impossible d'interagir avec l'écran depuis GitHub Actions, testé et
+  # confirmé — utile pour de la CI automatisée, pas pour un vrai test de
+  # navigation visuelle). Se déclenche uniquement si mobile/ a changé,
+  # jamais sur du code web seul — le multiplicateur macOS est x10 sur
+  # runner privé, un déclenchement systématique serait un vrai coût pour
+  # un filet qui ne concerne qu'un sous-dossier.
+  mobile-build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            mobile:
+              - 'mobile/**'
+      - uses: actions/setup-node@v4
+        if: steps.changes.outputs.mobile == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Installer les dépendances mobile
+        if: steps.changes.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npm ci --legacy-peer-deps
+      - name: Typecheck mobile
+        if: steps.changes.outputs.mobile == 'true'
+        working-directory: mobile
+        run: npm run typecheck
+      - name: Export Expo (compile réellement le bundle natif, pas juste tsc)
+        if: steps.changes.outputs.mobile == 'true'
+        working-directory: mobile
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder
+        run: npx expo export --platform ios
