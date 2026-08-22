@@ -43,15 +43,52 @@ function escapeRegExp(s: string): string {
 //    longueur et la vérification par frontière de mot (\b), absentes des
 //    cas 1 et 2 qui n'en ont pas besoin (la sous-chaîne y est déjà assez
 //    spécifique en pratique).
+// Limite connue, corrigée ici : un critère de durée d'expérience qui
+// mentionne une techno ("5 ans d'expérience Java minimum") matchait
+// partiellement via la règle 3 dès qu'un candidat listait cette techno,
+// indépendamment de son ancienneté réelle. Vérifié contre la vraie base
+// avant cette correction : 7 critères réels portent déjà ce pattern
+// exact, pas un cas hypothétique.
 //
-// Limite connue, hors périmètre de cette correction : un critère de durée
-// d'expérience qui mentionne une techno ("5 ans d'expérience Java minimum")
-// matchera partiellement via la règle 3 dès qu'un candidat liste cette
-// techno, indépendamment de son ancienneté réelle. Corriger ça demanderait
-// de comprendre la sémantique de la durée, pas juste la présence d'un mot —
-// un chantier différent, pas un des deux bugs validés par l'annotation externe.
+// Détection ciblée par regex, pas une taxonomie de types de critères
+// complète (technology/certification/location/availability/rate/
+// language) — le document externe qui a signalé ce cas déconseille
+// lui-même un moteur NLP complexe pour ce qui reste un problème de
+// reconnaissance de motif, pas de compréhension sémantique générale.
+const YEARS_EXPERIENCE_PATTERN = /(\d+)\s*(?:an|ans|année|années)\b/i
+
+function extractRequiredYears(label: string): number | null {
+  const match = label.match(YEARS_EXPERIENCE_PATTERN)
+  if (!match) return null
+  return parseInt(match[1] as string, 10)
+}
+
+// Cherche une durée dans le texte candidat, sans supposer qu'elle porte
+// sur la même techno que le critère — le système ne sait déjà pas
+// aujourd'hui associer une durée précise à une compétence précise dans
+// un texte libre, ce serait un vrai moteur NLP, hors périmètre. Ce
+// qu'on peut honnêtement garantir : si le candidat ne mentionne AUCUNE
+// durée nulle part, un critère de durée ne doit jamais être considéré
+// comme prouvé par la seule présence du nom de la techno.
+function candidateHasAnyYearsMention(haystack: string): boolean {
+  return YEARS_EXPERIENCE_PATTERN.test(haystack)
+}
+
 function criterionMatches(label: string, haystack: string, candidateSkills: string[]): boolean {
   const labelLower = label.toLowerCase()
+
+  // Critère de durée d'expérience : la présence du nom de la techno
+  // seule (règle 3 plus bas) ne suffit jamais. Le candidat doit au
+  // moins mentionner une durée quelque part dans son profil — pas une
+  // preuve que la durée correspond exactement au critère (ça resterait
+  // une inférence, jamais un VERIFIED automatique dans le vrai système
+  // d'Evidence), mais un vrai garde-fou contre le faux positif nommé
+  // dans le document : "Java developer" ne doit jamais suffire à
+  // matcher "5 ans d'expérience Java minimum".
+  const requiredYears = extractRequiredYears(labelLower)
+  if (requiredYears !== null && !candidateHasAnyYearsMention(haystack)) {
+    return false
+  }
 
   if (haystack.includes(labelLower)) return true
 

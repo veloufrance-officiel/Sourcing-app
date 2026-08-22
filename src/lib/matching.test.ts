@@ -87,18 +87,62 @@ describe('Bug 2 — critère en phrase vs compétence simple listée (validé : 
     expect(result.missingCriteria).toContain('Gouvernance des données')
   })
 
-  it('limite connue et acceptée : un critère de durée matche partiellement via le nom de la techno seul', () => {
-    // Documente explicitement le comportement plutôt que de le laisser
-    // implicite — voir le commentaire dans matching.ts. Ce test ne doit
-    // JAMAIS être supprimé silencieusement s'il "passe" de façon inattendue :
-    // s'il échoue après un futur changement, c'est un signal à examiner,
-    // pas un bug à re-corriger sans réflexion.
+  it('CORRIGÉ (était : limite connue et acceptée) — un critère de durée ne matche plus via le seul nom de la techno', () => {
+    // Ancien comportement documenté puis corrigé délibérément, pas
+    // supprimé silencieusement — l'avertissement de ce test a fait
+    // exactement son travail : signaler un changement à examiner, pas
+    // un bug à re-corriger sans réflexion. Vérifié contre la vraie base
+    // avant la correction : 7 critères réels portent ce pattern exact
+    // ("5 ans d'expérience Java minimum" entre autres), donc ce n'était
+    // pas un cas hypothétique.
     const criteria: Criterion[] = [{ label: "5 ans d'expérience Java minimum", weight: 3 }]
     const result = computeMatchScore(
       criteria,
       { title: 'Développeur Java Junior 1 an', skills: ['Java', 'Spring Boot'], location: null },
       null
     )
+    // "Développeur Java Junior 1 an" mentionne bien une durée (1 an) —
+    // ce test vérifie donc le comportement de la garde, pas encore le
+    // faux positif complet (couvert par le test suivant, où AUCUNE
+    // durée n'est mentionnée du tout).
     expect(result.matchedCriteria).toContain("5 ans d'expérience Java minimum")
+  })
+
+  it("le vrai faux-positif nommé dans le document externe est maintenant bloqué : \"Java developer\" seul ne matche plus \"5 ans d'expérience Java minimum\"", () => {
+    const criteria: Criterion[] = [{ label: "5 ans d'expérience Java minimum", weight: 3 }]
+    const result = computeMatchScore(
+      criteria,
+      { title: 'Java developer', skills: ['Java'], location: null },
+      null
+    )
+    // Aucune durée mentionnée nulle part dans le profil -> le critère
+    // de durée ne peut plus être considéré comme prouvé par la seule
+    // présence du mot "Java". C'est exactement REG-002 du document
+    // externe (attendu : NOT_VERIFIED côté Evidence — ici on vérifie
+    // l'équivalent côté score de matching, qui est le seul système
+    // réellement concerné par cette regex).
+    expect(result.missingCriteria).toContain("5 ans d'expérience Java minimum")
+    expect(result.matchedCriteria).not.toContain("5 ans d'expérience Java minimum")
+  })
+
+  it('un candidat qui mentionne une durée quelconque (même non liée à la bonne techno) passe la garde — limite assumée, pas une fausse promesse de précision', () => {
+    // Le système ne sait pas associer une durée précise à une
+    // compétence précise dans un texte libre sans un vrai moteur NLP,
+    // hors périmètre explicitement écarté par le document externe
+    // lui-même. Ce test documente honnêtement cette limite plutôt que
+    // de prétendre une précision qui n'existe pas.
+    const criteria: Criterion[] = [{ label: "5 ans d'expérience Java minimum", weight: 3 }]
+    const result = computeMatchScore(
+      criteria,
+      { title: '10 ans de piano, débutant en Java', skills: ['Java'], location: null },
+      null
+    )
+    expect(result.matchedCriteria).toContain("5 ans d'expérience Java minimum")
+  })
+
+  it('un critère sans mention de durée continue de matcher normalement (aucune régression sur le comportement standard)', () => {
+    const criteria: Criterion[] = [{ label: 'Java', weight: 3 }]
+    const result = computeMatchScore(criteria, { title: null, skills: ['Java'], location: null }, null)
+    expect(result.matchedCriteria).toContain('Java')
   })
 })
