@@ -3,9 +3,13 @@
     "name": "SourcingOS",
     "slug": "sourcingos-mobile",
     "version": "1.0.0",
+    "scheme": "sourcingos",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "experiments": {
+      "typedRoutes": true
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.orakl.sourcingos"
