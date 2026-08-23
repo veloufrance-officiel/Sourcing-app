@@ -22,7 +22,16 @@
     "react-native-worklets": "^0.12.1"
   },
   "devDependencies": {
+    "@jest/globals": "^30.4.1",
+    "@react-native/jest-preset": "^0.86.2",
+    "@testing-library/react-native": "^14.0.1",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.2.2",
+    "dotenv": "^17.4.2",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
+    "jest-expo": "^57.0.4",
+    "test-renderer": "^1.2.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
@@ -31,7 +40,15 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "vercel-build": "expo export -p web"
+    "vercel-build": "expo export -p web",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
+  },
+  "jest": {
+    "preset": "jest-expo",
+    "setupFiles": ["<rootDir>/jest.setup.js"]
+  },
+  "overrides": {
+    "jest-mock": "30.4.1"
   },
   "private": true
 }
