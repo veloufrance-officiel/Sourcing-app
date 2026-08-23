@@ -22,5 +22,13 @@ export default defineConfig({
   test: {
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
+    // mobile/ a sa propre stack de test (Jest, pas Vitest — voie
+    // officiellement recommandée par Expo pour React Native, vérifié
+    // avant de l'installer). Sans cette exclusion, Vitest scanne aussi
+    // les fichiers .test.tsx du dossier mobile et échoue à parser leur
+    // JSX React Native (SyntaxError sur des tokens comme `typeof`) —
+    // trou d'isolation jamais couvert par le default exclude de
+    // Vitest, découvert en ajoutant le premier test mobile.
+    exclude: ['**/node_modules/**', '**/mobile/**'],
   },
 })
