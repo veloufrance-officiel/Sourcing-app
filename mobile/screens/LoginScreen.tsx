@@ -3,14 +3,19 @@
 // shouldCreateUser: false, pas de self-serve en Phase 1, seuls les
 // comptes déjà provisionnés peuvent se connecter.
 //
-// Limite connue, pas résolue ici : un magic link envoyé par email ouvre
-// normalement un navigateur, pas directement l'app — rouvrir l'app
-// depuis ce lien nécessite un deep link configuré (scheme dans app.json
-// + gestion du retour dans le code), volontairement hors périmètre de ce
-// premier écran fonctionnel. Pour l'instant, le lien confirme la
-// connexion mais l'utilisateur doit revenir manuellement dans l'app.
+// emailRedirectTo explicite sur web : sans lui, Supabase retombe
+// silencieusement sur le Site URL par défaut du projet (confirmé par
+// la doc officielle Supabase) — c'est exactement ce qui redirigeait
+// vers le site web principal au lieu de ce déploiement mobile de test,
+// avant cette correction. Doit correspondre à une entrée de la liste
+// "Redirect URLs" du Dashboard Supabase, sinon même correction
+// silencieusement ignorée — vérifier ce réglage côté Dashboard.
+//
+// Platform.OS === 'web' avant d'utiliser window : ce composant est
+// partagé avec le natif iOS/Android (jamais de `window` global
+// là-bas), un accès direct planterait un futur build natif.
 import { useState } from 'react'
-import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator, Platform } from 'react-native'
 import { supabase } from '../lib/supabase'
 
 export function LoginScreen() {
@@ -32,7 +37,10 @@ export function LoginScreen() {
     // provisionnés en base peuvent recevoir un lien.
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { shouldCreateUser: false },
+      options: {
+        shouldCreateUser: false,
+        ...(Platform.OS === 'web' ? { emailRedirectTo: window.location.origin } : {}),
+      },
     })
 
     if (error) {
