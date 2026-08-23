@@ -46,6 +46,7 @@ export default function RootLayout() {
         <Stack.Protected guard={!!session}>
           <Stack.Screen name="index" options={{ title: 'Missions' }} />
           <Stack.Screen name="mission/[id]" options={{ title: 'Détail mission' }} />
+          <Stack.Screen name="candidate/[id]" options={{ title: 'Détail candidat' }} />
         </Stack.Protected>
         <Stack.Protected guard={!session}>
           <Stack.Screen name="login" options={{ headerShown: false }} />

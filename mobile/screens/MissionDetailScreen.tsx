@@ -7,8 +7,9 @@
 // prématurée pour ce premier écran, cohérent avec le principe déjà
 // retenu tout au long de ce projet.
 import { useEffect, useState } from 'react'
-import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native'
+import { View, Text, FlatList, StyleSheet, ActivityIndicator, Pressable } from 'react-native'
 import { supabase } from '../lib/supabase'
+import { EligibilityBadge, type EligibilityStatus } from './EligibilityBadge'
 
 type MissionDetail = {
   id: string
@@ -18,8 +19,6 @@ type MissionDetail = {
   daily_rate: number | null
   clients: { name: string } | null
 }
-
-type EligibilityStatus = 'ELIGIBLE' | 'NOT_QUALIFIED' | 'INELIGIBLE'
 
 type MissionCandidateEntry = {
   id: string
@@ -32,29 +31,13 @@ type MissionCandidateEntry = {
   } | null
 }
 
-function EligibilityBadge({ status }: { status: EligibilityStatus }) {
-  if (status === 'ELIGIBLE') {
-    return (
-      <View style={[styles.badge, styles.badgeEligible]}>
-        <Text style={styles.badgeTextEligible}>Éligible</Text>
-      </View>
-    )
-  }
-  if (status === 'NOT_QUALIFIED') {
-    return (
-      <View style={[styles.badge, styles.badgeAmber]}>
-        <Text style={styles.badgeTextAmber}>À vérifier</Text>
-      </View>
-    )
-  }
-  return (
-    <View style={[styles.badge, styles.badgeNeutral]}>
-      <Text style={styles.badgeTextNeutral}>Non éligible</Text>
-    </View>
-  )
-}
-
-export function MissionDetailScreen({ missionId }: { missionId: string }) {
+export function MissionDetailScreen({
+  missionId,
+  onSelectCandidate,
+}: {
+  missionId: string
+  onSelectCandidate: (candidateId: string) => void
+}) {
   const [mission, setMission] = useState<MissionDetail | null>(null)
   const [entries, setEntries] = useState<MissionCandidateEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -137,15 +120,24 @@ export function MissionDetailScreen({ missionId }: { missionId: string }) {
       }
       data={entries}
       keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <View style={styles.candidateCard}>
-          <View style={styles.candidateInfo}>
-            <Text style={styles.candidateName}>{item.candidates?.full_name ?? 'Candidat'}</Text>
-            {item.candidates?.title ? <Text style={styles.candidateTitle}>{item.candidates.title}</Text> : null}
+      renderItem={({ item }) =>
+        item.candidates ? (
+          <Pressable style={styles.candidateCard} onPress={() => onSelectCandidate(item.candidates!.id)}>
+            <View style={styles.candidateInfo}>
+              <Text style={styles.candidateName}>{item.candidates.full_name}</Text>
+              {item.candidates.title ? <Text style={styles.candidateTitle}>{item.candidates.title}</Text> : null}
+            </View>
+            <EligibilityBadge status={item.eligibility_status} />
+          </Pressable>
+        ) : (
+          <View style={styles.candidateCard}>
+            <View style={styles.candidateInfo}>
+              <Text style={styles.candidateName}>Candidat</Text>
+            </View>
+            <EligibilityBadge status={item.eligibility_status} />
           </View>
-          <EligibilityBadge status={item.eligibility_status} />
-        </View>
-      )}
+        )
+      }
       ListEmptyComponent={
         <View style={styles.centered}>
           <Text style={styles.empty}>Aucun candidat pour cette mission.</Text>
@@ -178,13 +170,6 @@ const styles = StyleSheet.create({
   candidateInfo: { flex: 1, marginRight: 12 },
   candidateName: { fontSize: 15, fontWeight: '600' },
   candidateTitle: { fontSize: 13, color: '#6b7280', marginTop: 2 },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  badgeEligible: { backgroundColor: '#dcfce7' },
-  badgeTextEligible: { fontSize: 11, fontWeight: '700', color: '#166534', textTransform: 'uppercase' },
-  badgeAmber: { backgroundColor: '#fef3c7' },
-  badgeTextAmber: { fontSize: 11, fontWeight: '700', color: '#92400e', textTransform: 'uppercase' },
-  badgeNeutral: { backgroundColor: '#e5e7eb' },
-  badgeTextNeutral: { fontSize: 11, fontWeight: '700', color: '#374151', textTransform: 'uppercase' },
   error: { color: '#dc2626', fontSize: 14, textAlign: 'center' },
   empty: { color: '#6b7280', fontSize: 14, textAlign: 'center' },
 })
