@@ -1,6 +1,6 @@
 # SourcingOS — Document technique (DSI / CTO / responsable sécurité)
 
-État du dépôt documenté : `main @ 1e35085`. Chaque affirmation ci-dessous a été vérifiée directement contre le schéma réel de la base ou le code source au moment de la rédaction — pas de mémoire, pas de supposition. Là où une garantie est partielle ou absente, c'est nommé explicitement.
+État du dépôt documenté : `main @ 1f4e945`. Chaque affirmation ci-dessous a été vérifiée directement contre le schéma réel de la base ou le code source au moment de la rédaction — pas de mémoire, pas de supposition. Là où une garantie est partielle ou absente, c'est nommé explicitement.
 
 ## 1. Architecture applicative
 
@@ -150,9 +150,23 @@ Deux fonctions de purge distinctes (`enforce_data_retention`, `enforce_oppositio
 
 ## 12. Tests et CI
 
-105 tests Vitest au moment de la rédaction (Server Actions, composants) — chiffre évolutif, `npm run test` fait foi. 7 fichiers de tests SQL exécutés en CI contre une stack Supabase locale **fraîchement provisionnée** à chaque run (pas un environnement persistant) : isolation RLS/RBAC, moteur d'éligibilité, vérification humaine Evidence, shortlist gate, trigger d'opposition, rétention, sérialisation contact/opposition.
+108 tests Vitest au moment de la rédaction (Server Actions, composants) — chiffre évolutif, `npm run test` fait foi. 7 fichiers de tests SQL exécutés en CI contre une stack Supabase locale **fraîchement provisionnée** à chaque run (pas un environnement persistant) : isolation RLS/RBAC, moteur d'éligibilité, vérification humaine Evidence, shortlist gate, trigger d'opposition, rétention, sérialisation contact/opposition. Côté mobile, 4 tests Jest au moment de la rédaction (`cd mobile && npm test`), première brique d'une suite encore réduite.
 
-## 13. Limites de sécurité connues, non résolues à ce jour
+## 13. Application mobile (React Native / Expo)
+
+Client distinct dans `mobile/`, backend et policies RLS partagés avec le web — aucune logique métier dupliquée côté serveur. Le web reste la référence pour toute fonctionnalité pas encore portée.
+
+**Client Supabase spécifique** : `@supabase/supabase-js` + `AsyncStorage` pour la persistance de session (pattern documenté officiellement par Supabase pour React Native), jamais `@supabase/ssr` — celui-ci dépend de l'API cookies HTTP de Next.js, sans équivalent en mobile natif.
+
+**Deep linking** : `scheme: "sourcingos"` déclaré dans `app.json`. Côté web, la redirection du magic link est explicite (`emailRedirectTo: window.location.origin`) — sans cette précision, Supabase retombe silencieusement sur le Site URL par défaut du projet, un comportement découvert en usage réel, pas anticipé.
+
+**Vérifié en conditions réelles, pas seulement en théorie** : le premier test de connexion en production a révélé deux défauts distincts, tous deux corrigés puis reconfirmés en exécutant le bundle final déployé — une désynchronisation de version `react`/`react-dom` (page blanche silencieuse, `React error #527`) et la redirection incorrecte du magic link.
+
+**Stack de test** : Jest, pas Vitest — décision inversée par rapport au web après vérification (Jest est la voie officiellement recommandée par la documentation Expo pour React Native ; les portages Vitest existants sont explicitement en bêta au moment de la rédaction). Le monorepo a révélé trois trous d'isolation jamais anticipés avant l'ajout du mobile : `tsconfig.json`, `eslint.config.mjs` et `vitest.config.ts` racine ne l'excluaient pas, chacun corrigé.
+
+**Limites explicites, pas dissimulées** : aucun test en simulateur ou device réel (natif jamais exécuté, seulement `react-native-web` en navigateur) ; aucun compte Apple Developer souscrit à ce jour, donc aucune build EAS réelle ni soumission App Store ; score de matching, mécanisme de contact, gestion des oppositions et vérification Evidence humaine non portés côté mobile.
+
+## 14. Limites de sécurité connues, non résolues à ce jour
 
 - Aucune sauvegarde automatisée en place (item déjà identifié en audit interne, différé pour raison budgétaire)
 - `contact_oppositions.recorded_by` documente l'auteur du contact initial, pas nécessairement celui qui a constaté la réponse — pas de colonne `responded_by` distincte sur `candidate_contacts`
