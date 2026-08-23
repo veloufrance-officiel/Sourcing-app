@@ -37,7 +37,7 @@ Application mobile distincte, dans `mobile/` — même backend Supabase, mêmes 
 
 **Décision d'architecture** : React Native natif plutôt qu'un wrapper web (Capacitor) — pour une vraie distribution App Store, un simple wrapper risque un rejet Apple (Guideline 4.2, "minimum functionality"). Expo + EAS permet de builder et signer sans avoir besoin d'un Mac physique.
 
-**Écrans implémentés, vérifiés contre la vraie base** :
+**Écrans implémentés** — chacun vérifié manuellement contre la vraie base au moment de l'écriture (requêtes SQL directes), mais la couverture de test automatisé reste réduite (voir plus bas) :
 - Connexion par magic link (même politique que le web — comptes pré-provisionnés uniquement, pas de self-serve)
 - Liste des missions
 - Détail mission (candidats, statut d'éligibilité)
@@ -45,7 +45,7 @@ Application mobile distincte, dans `mobile/` — même backend Supabase, mêmes 
 
 **Ce qui n'est volontairement pas encore porté côté mobile** : score de matching affiché, mécanisme de contact candidat, gestion des oppositions, dossier Evidence interactif (vérification humaine). Le mobile reste un client de lecture sur ces points à ce stade.
 
-Tests : Jest (voie officiellement recommandée par Expo pour React Native, pas Vitest) — `cd mobile && npm test`.
+Tests : Jest (voie officiellement recommandée par Expo pour React Native, pas Vitest) — `cd mobile && npm test`. Couverture encore réduite (4 tests au moment de la rédaction, sur `EligibilityBadge` uniquement) — les 4 écrans ne sont pas tous couverts par des tests automatisés à ce stade.
 
 Déploiement web de test (via `react-native-web`, utile pour vérifier visuellement sans simulateur iOS/Android) : voir `mobile/vercel.json`.
 
