@@ -1,0 +1,10 @@
+{
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": "dist",
+  "devCommand": "expo start --web",
+  "cleanUrls": true,
+  "framework": null,
+  "rewrites": [
+    { "source": "/:path*", "destination": "/" }
+  ]
+}
