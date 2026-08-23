@@ -31,6 +31,24 @@ Shortlist — insertion refusée en base si le candidat n'est pas ELIGIBLE
 [Pour un candidat GitHub] Contact tracé → réponse → si opposition, blocage durable
 ```
 
+## Mobile (React Native / Expo)
+
+Application mobile distincte, dans `mobile/` — même backend Supabase, mêmes policies RLS que le web, jamais de duplication de logique métier côté serveur.
+
+**Décision d'architecture** : React Native natif plutôt qu'un wrapper web (Capacitor) — pour une vraie distribution App Store, un simple wrapper risque un rejet Apple (Guideline 4.2, "minimum functionality"). Expo + EAS permet de builder et signer sans avoir besoin d'un Mac physique.
+
+**Écrans implémentés, vérifiés contre la vraie base** :
+- Connexion par magic link (même politique que le web — comptes pré-provisionnés uniquement, pas de self-serve)
+- Liste des missions
+- Détail mission (candidats, statut d'éligibilité)
+- Détail candidat (critères, statut de preuve par critère — vocabulaire identique au web)
+
+**Ce qui n'est volontairement pas encore porté côté mobile** : score de matching affiché, mécanisme de contact candidat, gestion des oppositions, dossier Evidence interactif (vérification humaine). Le mobile reste un client de lecture sur ces points à ce stade.
+
+Tests : Jest (voie officiellement recommandée par Expo pour React Native, pas Vitest) — `cd mobile && npm test`.
+
+Déploiement web de test (via `react-native-web`, utile pour vérifier visuellement sans simulateur iOS/Android) : voir `mobile/vercel.json`.
+
 ## Architecture générale
 
 - **Next.js 16** (App Router), Server Actions comme unique point d'écriture depuis l'UI
@@ -83,6 +101,7 @@ Les tests SQL (isolation RLS/RBAC, moteur d'éligibilité, vérification humaine
 - Mécanisme de contact candidat (génération de message, traçabilité, réponse, opposition)
 - Rétention RGPD différenciée (candidats jusqu'à 2 ans ; liste d'opposition : au minimum 3 ans), cron quotidien
 - RBAC, isolation multi-tenant, audit trail append-only
+- Application mobile React Native/Expo (4 écrans : login, missions, détail mission, détail candidat), même backend que le web
 
 **Explicitement absent, pas une fonctionnalité cachée :**
 - Aucun envoi d'email automatisé — le mécanisme de contact génère un message, le recruteur le copie et l'envoie lui-même depuis son propre canal
@@ -97,3 +116,5 @@ Les tests SQL (isolation RLS/RBAC, moteur d'éligibilité, vérification humaine
 - `contact_oppositions.recorded_by` reflète l'auteur du contact initial, pas nécessairement celui qui a constaté la réponse — `candidate_contacts` n'a pas de colonne `responded_by` distincte
 - Le scénario de concurrence réelle (deux transactions simultanées) sur le verrou de sérialisation contact/opposition est documenté et repose sur une propriété PostgreSQL établie, mais n'a pas été démontré empiriquement avec deux connexions réellement concurrentes — limite d'outillage, pas d'architecture
 - Aucun automated backup n'est en place à ce stade (item déjà identifié en audit de sécurité, en attente budgétaire)
+- L'app mobile n'a jamais été testée en vrai natif (simulateur iOS/Android, ou build EAS réel) — uniquement validée via `react-native-web` dans un navigateur ; les deux plateformes natives partagent le même code mais leur comportement réel reste à confirmer
+- La distribution App Store nécessite un compte Apple Developer payant, pas encore souscrit — le mobile reste un projet local/déployé en web de test à ce stade
