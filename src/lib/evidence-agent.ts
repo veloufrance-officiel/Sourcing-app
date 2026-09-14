@@ -42,6 +42,38 @@ function text(value: unknown): string {
   return typeof value === 'string' ? value.trim() : ''
 }
 
+export function groundEvidenceProposals(input: {
+  sourceText: string
+  sourceType: EvidenceSourceType
+  sourceUrl: string | null
+  proposals: unknown[]
+}) {
+  const result: Array<{
+    criterion_id: string
+    evidence_text: string
+    source_type: EvidenceSourceType
+    source_url: string | null
+  }> = []
+
+  for (const raw of input.proposals) {
+    const proposal = record(raw)
+    if (!proposal) continue
+    const criterionId = text(proposal.criterion_id)
+    const evidenceText = text(proposal.evidence_text)
+    const excerpt = text(proposal.source_excerpt)
+    if (!criterionId || !evidenceText || !excerpt) continue
+    if (!input.sourceText.includes(excerpt)) continue
+    result.push({
+      criterion_id: criterionId,
+      evidence_text: `${evidenceText} [Source: ${excerpt}]`,
+      source_type: input.sourceType,
+      source_url: input.sourceUrl,
+    })
+  }
+
+  return result
+}
+
 export function buildEvidenceDrafts(input: Input): EvidenceDraft[] {
   const allowedCriteria = new Set(input.mandatoryCriteria.map((criterion) => criterion.id))
   const seen = new Set<string>()
