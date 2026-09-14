@@ -16,7 +16,7 @@ describe('buildEvidenceDrafts', () => {
         {
           criterion_id: 'criterion-typescript',
           evidence_text: 'Le profil mentionne TypeScript dans ses compétences publiques.',
-          source_type: 'candidate_profile',
+          source_type: 'web_search',
           source_url: 'https://example.com/candidate-1',
         },
       ],
@@ -30,7 +30,7 @@ describe('buildEvidenceDrafts', () => {
         status: 'INFERRED_UNCONFIRMED',
         is_inference: true,
         evidence_text: 'Le profil mentionne TypeScript dans ses compétences publiques.',
-        source_type: 'candidate_profile',
+        source_type: 'web_search',
         source_priority: 3,
         source_url: 'https://example.com/candidate-1',
       },
@@ -46,7 +46,7 @@ describe('buildEvidenceDrafts', () => {
         {
           criterion_id: 'criterion-typescript',
           evidence_text: '   ',
-          source_type: 'candidate_profile',
+          source_type: 'web_search',
           source_url: 'https://example.com/candidate-1',
         },
       ],
@@ -82,7 +82,7 @@ describe('buildEvidenceDrafts', () => {
         {
           criterion_id: 'criterion-invented-by-ai',
           evidence_text: 'Signal inventé pour un critère inconnu.',
-          source_type: 'candidate_profile',
+          source_type: 'web_search',
           source_url: 'https://example.com/candidate-1',
         },
       ],
@@ -100,7 +100,7 @@ describe('buildEvidenceDrafts', () => {
         {
           criterion_id: 'criterion-security',
           evidence_text: 'Le profil public mentionne une mission de sécurité.',
-          source_type: 'candidate_profile',
+          source_type: 'web_search',
           source_url: 'https://example.com/candidate-1',
           status: 'VERIFIED',
           eligibility: 'ELIGIBLE',
@@ -119,7 +119,7 @@ describe('buildEvidenceDrafts', () => {
     const proposal = {
       criterion_id: 'criterion-typescript',
       evidence_text: 'TypeScript apparaît dans le profil.',
-      source_type: 'candidate_profile',
+      source_type: 'web_search',
       source_url: 'https://example.com/candidate-1',
     }
 
