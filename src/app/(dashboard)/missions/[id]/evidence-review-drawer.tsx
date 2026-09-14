@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react'
 import { CheckCircle2, ShieldQuestion, X, XCircle } from 'lucide-react'
 import { confirmEvidence, type ConfirmEvidenceState } from './evidence-actions'
+import { EvidenceAgentButton } from './evidence-agent-button'
 
 export type EvidenceCriterion = {
   criterionId: string
@@ -170,6 +171,10 @@ export function EvidenceReviewDrawer({
               <button type="button" onClick={() => setOpen(false)} className="text-slate hover:text-ink">
                 <X className="h-4 w-4" />
               </button>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <EvidenceAgentButton missionId={missionId} candidateId={candidateId} />
             </div>
 
             <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-slate">
