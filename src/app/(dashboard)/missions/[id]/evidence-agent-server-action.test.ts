@@ -37,7 +37,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }))
 
 vi.mock('@/lib/anthropic', () => ({
-  getAnthropicClientForTenantSafe: mockGetAnthropic,
+  getAnthropicClientForTenantSafe: (...args: unknown[]) => mockGetAnthropic(...args),
 }))
 
 vi.mock('@/lib/log', () => ({ logServerError: vi.fn() }))
